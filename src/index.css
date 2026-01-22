@@ -1,0 +1,264 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary brand - Deep Navy */
+    --background: 220 25% 97%;
+    --foreground: 222 47% 11%;
+    
+    /* Card surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    /* Primary - Deep Navy Blue */
+    --primary: 215 50% 12%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - Teal accent */
+    --secondary: 168 76% 42%;
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Muted */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    
+    /* Accent - Emerald */
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders & inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 215 50% 12%;
+    
+    --radius: 0.75rem;
+    
+    /* Custom brand colors */
+    --navy-50: 220 25% 97%;
+    --navy-100: 220 20% 92%;
+    --navy-200: 220 18% 82%;
+    --navy-300: 220 16% 65%;
+    --navy-400: 220 15% 45%;
+    --navy-500: 215 25% 27%;
+    --navy-600: 215 35% 20%;
+    --navy-700: 215 45% 15%;
+    --navy-800: 215 50% 12%;
+    --navy-900: 218 55% 8%;
+    
+    --teal-50: 166 76% 97%;
+    --teal-100: 166 76% 90%;
+    --teal-200: 168 76% 80%;
+    --teal-300: 168 76% 65%;
+    --teal-400: 168 76% 50%;
+    --teal-500: 168 76% 42%;
+    --teal-600: 168 76% 36%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(215 50% 12%) 0%, hsl(215 35% 20%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(168 76% 42%) 0%, hsl(160 84% 39%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(218 55% 8%) 0%, hsl(215 35% 20%) 50%, hsl(168 76% 36%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 40px rgba(20, 184, 166, 0.3);
+    --shadow-card: 0 4px 24px rgba(10, 22, 40, 0.08);
+    
+    /* Sidebar (keeping defaults) */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 218 55% 8%;
+    --foreground: 0 0% 98%;
+    
+    --card: 215 45% 12%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 215 45% 12%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 168 76% 50%;
+    --primary-foreground: 218 55% 8%;
+    
+    --secondary: 215 35% 20%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 215 35% 20%;
+    --muted-foreground: 220 14% 70%;
+    
+    --accent: 168 76% 42%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 215 35% 20%;
+    --input: 215 35% 20%;
+    --ring: 168 76% 50%;
+    
+    --sidebar-background: 218 55% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 168 76% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 35% 20%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 215 35% 20%;
+    --sidebar-ring: 168 76% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+@layer utilities {
+  /* Glass morphism */
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+    box-shadow: var(--shadow-card);
+  }
+  
+  .glass-dark {
+    @apply bg-primary/80 backdrop-blur-xl border border-white/10;
+  }
+  
+  /* Text gradients */
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+  
+  .text-gradient-secondary {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-secondary);
+  }
+  
+  /* Glow effects */
+  .glow-teal {
+    box-shadow: 0 0 30px rgba(20, 184, 166, 0.4), 0 0 60px rgba(20, 184, 166, 0.2);
+  }
+  
+  .glow-navy {
+    box-shadow: 0 0 30px rgba(10, 22, 40, 0.4);
+  }
+  
+  /* Animations */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out forwards;
+  }
+}
+
+/* Keyframe animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* Custom selection */
+::selection {
+  @apply bg-secondary/30 text-foreground;
+}
