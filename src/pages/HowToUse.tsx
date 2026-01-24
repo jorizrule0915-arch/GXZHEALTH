@@ -12,13 +12,13 @@ const HowToUse = () => {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const tutorialSteps = [
-    { step: 1, title: "Gather Supplies", instruction: "Gather pen, cartridge, needles, alcohol swabs, B12 vial, and syringe.", category: "prep" },
+    { step: 1, title: "Gather Supplies", instruction: "Gather pen, cartridge, needles, alcohol swabs, Compound, and syringe.", category: "prep" },
     { step: 2, title: "Prepare Area", instruction: "Wash hands and clean work surface.", category: "prep" },
     { step: 3, title: "Attach Needle", instruction: "Twist reconstitution needle onto syringe until secure.", category: "prep" },
     { step: 4, title: "Prepare Vial", instruction: "Remove cap and clean rubber top with alcohol swab.", category: "prep" },
     { step: 5, title: "Fill Syringe", instruction: "Pull syringe plunger back to 3 mL.", category: "fill" },
     { step: 6, title: "Inject Air", instruction: "Insert needle into vial and push 3 mL air inside.", category: "fill" },
-    { step: 7, title: "Draw B12", instruction: "Turn vial upside down and draw 3 mL B12 into syringe.", category: "fill" },
+    { step: 7, title: "Draw Compound", instruction: "Turn vial upside down and draw 3 mL Compound into syringe.", category: "fill" },
     { step: 8, title: "Secure Syringe", instruction: "Recap syringe and place on clean surface.", category: "fill" },
     { step: 9, title: "Open Pen", instruction: "Remove pen cap and unscrew chamber from body.", category: "assembly" },
     { step: 10, title: "Insert Cartridge", instruction: "Remove cartridge from packaging and place in chamber.", category: "assembly" },
@@ -169,7 +169,7 @@ const HowToUse = () => {
                   {/* Step image */}
                   <div className="h-64 md:h-80 bg-gradient-to-br from-primary/10 via-secondary/10 to-primary/5 flex items-center justify-center relative overflow-hidden">
                     <img 
-                      src={`/Step images/Step ${selectedStep}.${selectedStep === 1 || selectedStep === 6 ? 'jpeg' : 'jpg'}`}
+                      src={`/Step images/Step ${selectedStep}.${[1, 4, 5, 6, 17].includes(selectedStep) ? 'jpeg' : 'jpg'}`}
                       alt={`Step ${selectedStep}: ${currentStep.title}`}
                       className="w-full h-full object-contain"
                       onError={(e) => {
