@@ -171,7 +171,7 @@ const HowToUse = () => {
                     <img 
                       src={`/Step images/Step ${selectedStep}.${selectedStep === 1 || selectedStep === 6 ? 'jpeg' : 'jpg'}`}
                       alt={`Step ${selectedStep}: ${currentStep.title}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                       onError={(e) => {
                         // Fallback to placeholder if image doesn't exist
                         const target = e.target as HTMLImageElement;
