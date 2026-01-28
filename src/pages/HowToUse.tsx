@@ -11,6 +11,35 @@ const HowToUse = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
+  // YouTube video mapping with descriptions
+  const videoInstructions = [
+    { 
+      title: "How to use your pen", 
+      videoId: "7UOZ6iLO3JQ",
+      description: "A step-by-step guide on how to properly operate your refillable injection pen, from setup to correct usage."
+    },
+    { 
+      title: "What to expect when you receive your pen", 
+      videoId: "g5kVjiQakKs",
+      description: "An overview of what comes in the package, how your pen is delivered, and important things to check before first use."
+    },
+    { 
+      title: "How to reconstitute your compound", 
+      videoId: "djPEGo9uurk",
+      description: "This video explains the proper method for reconstituting your compound, including handling and mixing guidelines."
+    },
+    { 
+      title: "How to reconstitute your peptide", 
+      videoId: "SK1F6bqY0Qg",
+      description: "Learn the correct way to safely mix your peptide to ensure proper preparation and accurate dosing."
+    },
+    { 
+      title: "How to attach the needle to your pen", 
+      videoId: "bwZc9CwRLLg",
+      description: "A simple tutorial on how to securely attach the needle to your pen for safe and proper use."
+    }
+  ];
+
   const tutorialSteps = [
     { step: 1, title: "Gather Supplies", instruction: "Gather pen, cartridge, needles, alcohol swabs, Compound, and syringe.", category: "prep" },
     { step: 2, title: "Prepare Area", instruction: "Wash hands and clean work surface.", category: "prep" },
@@ -173,7 +202,6 @@ const HowToUse = () => {
                       alt={`Step ${selectedStep}: ${currentStep.title}`}
                       className="w-full h-full object-contain"
                       onError={(e) => {
-                        // Fallback to placeholder if image doesn't exist
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
                         target.nextElementSibling?.classList.remove('hidden');
@@ -257,6 +285,60 @@ const HowToUse = () => {
                 </motion.div>
               </AnimatePresence>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Instructions - WITH DESCRIPTIONS */}
+      <section className="py-16 bg-background">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Video Instructions
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Watch these detailed video guides for step-by-step visual instructions.
+            </p>
+          </div>
+          
+          <div className="max-w-6xl mx-auto space-y-16">
+            {videoInstructions.map((video, index) => {
+              const isEven = index % 2 === 0;
+              return (
+                <motion.div
+                  key={video.videoId}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`grid md:grid-cols-2 gap-8 items-center ${
+                    isEven ? '' : 'md:grid-flow-col-dense'
+                  }`}
+                >
+                  <div className={`${isEven ? 'md:order-1' : 'md:order-2'}`}>
+                    <div className="relative w-full overflow-hidden rounded-2xl shadow-lg border border-border pt-[56.25%]">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${video.videoId}?rel=0`}
+                        title={video.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        className="absolute top-0 left-0 w-full h-full rounded-2xl"
+                      ></iframe>
+                    </div>
+                  </div>
+                  
+                  <div className={`${isEven ? 'md:order-2' : 'md:order-1'} space-y-4`}>
+                    <h3 className="font-display text-2xl md:text-3xl font-bold text-foreground capitalize">
+                      {video.title}
+                    </h3>
+                    <p className="text-muted-foreground text-lg leading-relaxed">
+                      {video.description}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
