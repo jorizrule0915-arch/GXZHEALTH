@@ -1,24 +1,17 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, Trash2, Lock, CreditCard, ShoppingBag } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Minus, Plus, Trash2, Lock, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useCart } from '@/contexts/CartContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
 const Checkout = () => {
-  const { items, updateQuantity, removeItem, totalPrice, totalItems, clearCart } = useCart();
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCart();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (items.length === 0) {
       toast({
         title: "Cart is empty",
@@ -28,36 +21,10 @@ const Checkout = () => {
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          items: items.map(item => ({
-            priceId: item.priceId,
-            quantity: item.quantity
-          })),
-          customerEmail: email || undefined
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
-    } catch (error: any) {
-      console.error('Checkout error:', error);
-      toast({
-        title: "Checkout failed",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Checkout",
+      description: "Payment integration coming soon!"
+    });
   };
 
   return (
@@ -154,21 +121,6 @@ const Checkout = () => {
                   <div className="bg-card rounded-2xl border border-border p-6 sticky top-32">
                     <h2 className="font-semibold mb-6">Order Summary</h2>
                     
-                    {/* Email input */}
-                    <div className="mb-6">
-                      <Label htmlFor="email" className="text-sm text-muted-foreground">
-                        Email (for order confirmation)
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="mt-2"
-                      />
-                    </div>
-                    
                     <div className="space-y-3 pb-6 border-b border-border">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Subtotal</span>
@@ -190,21 +142,14 @@ const Checkout = () => {
                       className="w-full" 
                       size="lg"
                       onClick={handleCheckout}
-                      disabled={isLoading}
                     >
-                      {isLoading ? (
-                        "Processing..."
-                      ) : (
-                        <>
-                          <CreditCard className="w-5 h-5" />
-                          Checkout with Stripe
-                        </>
-                      )}
+                      <ShoppingBag className="w-5 h-5" />
+                      Proceed to Checkout
                     </Button>
                     
                     <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
                       <Lock className="w-3 h-3" />
-                      Secure checkout powered by Stripe
+                      Secure checkout
                     </div>
                   </div>
                 </div>

@@ -21,7 +21,6 @@ const Products = () => {
       id: product.id,
       name: product.name,
       price: product.price,
-      priceId: product.priceId,
       image: product.image
     });
     toast({
