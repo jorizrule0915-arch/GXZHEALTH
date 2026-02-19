@@ -25,7 +25,7 @@ export const products: Product[] = [
   },
   {
     id: 'cartridge',
-    name: 'Peptide Pen Cartridges',
+    name: 'Disposable 3Ml cartridges',
     description: 'Standard 3mL capacity cartridges compatible with all GXZ pens — $10 per set (10 pieces included)',
     price: 10.00,
     category: 'Cartridge',
@@ -34,7 +34,7 @@ export const products: Product[] = [
   },
   {
     id: 'pen',
-    name: 'Reusable Peptide Pens',
+    name: 'Reusable Injection Pens',
     description: 'Precision-engineered metal injection pen with adjustable dosing dial — 1 Pen for $20',
     price: 20.00,
     category: 'Pen',
