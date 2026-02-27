@@ -21,10 +21,7 @@ const Checkout = () => {
       return;
     }
 
-    toast({
-      title: "Checkout",
-      description: "Payment integration coming soon!"
-    });
+    window.location.href = 'https://payment-method.gxzpeptides.com/';
   };
 
   return (

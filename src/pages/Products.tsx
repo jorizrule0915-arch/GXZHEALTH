@@ -1,11 +1,15 @@
 import { motion } from 'framer-motion';
 import { ShoppingCart, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { products } from '@/lib/products';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -15,18 +19,50 @@ const fadeInUp = {
 const Products = () => {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string>('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleAddToCart = (product: typeof products[0]) => {
+    if (product.options && product.options.length > 0) {
+      setSelectedProduct(product);
+      setSelectedOption(product.options[0].value);
+      setIsDialogOpen(true);
+    } else {
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image
+      });
+      toast({
+        title: "Added to cart!",
+        description: `${product.name} has been added to your cart.`
+      });
+    }
+  };
+
+  const handleConfirmAddToCart = () => {
+    if (!selectedProduct) return;
+
+    const option = selectedProduct.options?.find(opt => opt.value === selectedOption);
+    const finalPrice = option?.price || selectedProduct.price;
+    const optionLabel = option?.label || '';
+
     addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image
+      id: `${selectedProduct.id}-${selectedOption}`,
+      name: `${selectedProduct.name} - ${optionLabel}`,
+      price: finalPrice,
+      image: selectedProduct.image
     });
+
     toast({
       title: "Added to cart!",
-      description: `${product.name} has been added to your cart.`
+      description: `${selectedProduct.name} (${optionLabel}) has been added to your cart.`
     });
+
+    setIsDialogOpen(false);
+    setSelectedProduct(null);
   };
 
   return (
@@ -181,6 +217,56 @@ const Products = () => {
       </section>
 
       <Footer />
+
+      {/* Options Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Option</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4">
+              {/* Product Image */}
+              <div className="relative h-48 rounded-xl overflow-hidden">
+                <img 
+                  src={selectedProduct.image} 
+                  alt={selectedProduct.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              {/* Product Info */}
+              <div>
+                <h3 className="font-semibold text-lg mb-2">{selectedProduct.name}</h3>
+                <p className="text-sm text-muted-foreground mb-4">{selectedProduct.description}</p>
+              </div>
+
+              {/* Options */}
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Choose an option:</Label>
+                <RadioGroup value={selectedOption} onValueChange={setSelectedOption}>
+                  {selectedProduct.options?.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2 p-3 border rounded-lg hover:border-foreground transition-colors cursor-pointer">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="flex-1 cursor-pointer">
+                        {option.label}
+                        {option.price && (
+                          <span className="ml-2 font-semibold text-secondary">${option.price.toFixed(2)}</span>
+                        )}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              <Button onClick={handleConfirmAddToCart} className="w-full" variant="buy" size="lg">
+                <ShoppingCart className="w-4 h-4" />
+                Add to Cart
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

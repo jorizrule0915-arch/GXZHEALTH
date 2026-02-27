@@ -5,6 +5,12 @@ import needlesImage from '@/assets/products/needles.jpg';
 import bodyBalmImage from '@/assets/products/Body Balm.jpg';
 import creatineImage from '@/assets/products/Creatine.jpg';
 
+export interface ProductOption {
+  label: string;
+  value: string;
+  price?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -13,6 +19,7 @@ export interface Product {
   category: string;
   image: string;
   features: string[];
+  options?: ProductOption[];
 }
 
 export const products: Product[] = [
@@ -23,7 +30,12 @@ export const products: Product[] = [
     price: 15.00,
     category: 'Accessory',
     image: syringeImage,
-    features: ['Sterile packaging', 'Multiple sizes', '100 per box']
+    features: ['Sterile packaging', 'Multiple sizes', '100 per box'],
+    options: [
+      { label: 'Small (1ml 30g)', value: 'small' },
+      { label: 'Mini (0.5ml 30g)', value: 'mini' },
+      { label: 'Large (3ml 23g)', value: 'large' }
+    ]
   },
   {
     id: 'cartridge',
@@ -46,20 +58,29 @@ export const products: Product[] = [
   {
     id: 'needles',
     name: 'Single-Use Pen Needles',
-    description: 'Standard Micro-Tip (32g x 4mm) — $8 per box (100 pieces included)',
+    description: 'Standard Micro-Tip — $8 per box (100 pieces included)',
     price: 8.00,
     category: 'Needle',
     image: needlesImage,
-    features: ['Ultra-fine 32g', '4mm length', '100 per box']
+    features: ['Ultra-fine', '100 per box'],
+    options: [
+      { label: 'Standard Micro-Tip (32g x 4mm)', value: '32g-4mm' },
+      { label: 'Standard Micro-Tip (31g x 8mm)', value: '31g-8mm' }
+    ]
   },
   {
     id: 'body-balm',
     name: 'GXZ Health Nourishing Body Balm',
     description: 'GXZ Health Nourishing Body Balm deeply moisturizes dry skin with cocoa butter, shea butter, and squalane. Its gentle, unscented formula leaves your skin soft and smooth all day.',
-    price: 23.99,
+    price: 16.99,
     category: 'Skincare',
     image: bodyBalmImage,
-    features: ['Cocoa butter', 'Shea butter', 'Unscented']
+    features: ['Cocoa butter', 'Shea butter'],
+    options: [
+      { label: 'Aloe Scent', value: 'aloe', price: 16.99 },
+      { label: 'Unscented', value: 'unscented', price: 16.99 },
+      { label: 'Pack (Both)', value: 'pack', price: 23.99 }
+    ]
   },
   {
     id: 'creatine',
