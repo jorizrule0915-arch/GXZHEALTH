@@ -57,7 +57,7 @@ const Products = () => {
             {/* Stats */}
             <div className="flex justify-center gap-12 mt-10">
               <div className="text-center">
-                <div className="font-display text-3xl font-bold text-secondary">4+</div>
+                <div className="font-display text-3xl font-bold text-secondary">6+</div>
                 <div className="text-sm text-muted-foreground">Product Categories</div>
               </div>
               <div className="text-center">
@@ -173,7 +173,7 @@ const Products = () => {
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-muted-foreground text-sm">
               <strong>Research Use Only:</strong> All products are intended for research purposes only. 
-              Not FDA approved. Not intended for medical, clinical, or insulin use on humans or animals.
+              Not intended for medical, clinical, or insulin use on humans or animals.
               Ensure compliance with all applicable laws and institutional guidelines.
             </p>
           </div>

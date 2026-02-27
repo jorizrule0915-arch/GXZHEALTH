@@ -2,6 +2,8 @@ import syringeImage from '@/assets/products/syringe.jpg';
 import cartridgeImage from '@/assets/products/cartridge.jpg';
 import penImage from '@/assets/products/reusable-pen.jpeg';
 import needlesImage from '@/assets/products/needles.jpg';
+import bodyBalmImage from '@/assets/products/Body Balm.jpg';
+import creatineImage from '@/assets/products/Creatine.jpg';
 
 export interface Product {
   id: string;
@@ -49,5 +51,23 @@ export const products: Product[] = [
     category: 'Needle',
     image: needlesImage,
     features: ['Ultra-fine 32g', '4mm length', '100 per box']
+  },
+  {
+    id: 'body-balm',
+    name: 'GXZ Health Nourishing Body Balm',
+    description: 'GXZ Health Nourishing Body Balm deeply moisturizes dry skin with cocoa butter, shea butter, and squalane. Its gentle, unscented formula leaves your skin soft and smooth all day.',
+    price: 23.99,
+    category: 'Skincare',
+    image: bodyBalmImage,
+    features: ['Cocoa butter', 'Shea butter', 'Unscented']
+  },
+  {
+    id: 'creatine',
+    name: 'GXZ Health Creatine Performance Matrix Powder',
+    description: 'GXZ Health Creatine helps boost strength, endurance, and hydration during workouts. It supports better performance and recovery to help you reach your fitness goals.',
+    price: 29.99,
+    category: 'Supplement',
+    image: creatineImage,
+    features: ['Boosts strength', 'Enhances endurance', 'Supports recovery']
   }
 ];
