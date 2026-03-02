@@ -193,11 +193,13 @@ const Products = () => {
             <p className="text-muted-foreground mb-6">
               Explore our complete collection with exclusive deals and bulk pricing options.
             </p>
-            <Button asChild variant="hero" size="lg">
-              <a href="https://gxzhealth.com/shop/" target="_blank" rel="noopener noreferrer">
-                Shop Now at GXZ Health
-                <ArrowRight className="w-5 h-5" />
-              </a>
+            <Button 
+              variant="hero" 
+              size="lg"
+              onClick={() => toast({ title: "COMING SOON!!" })}
+            >
+              Shop Now at GXZ Health
+              <ArrowRight className="w-5 h-5" />
             </Button>
           </motion.div>
         </div>
