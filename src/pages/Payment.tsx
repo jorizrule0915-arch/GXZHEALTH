@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import './Payment.css';
 
 interface OrderItem {
@@ -71,7 +72,26 @@ const Payment = () => {
     setIsModalOpen(false);
   };
 
-  const confirmPayment = () => {
+  const confirmPayment = async () => {
+    try {
+      // Save order to database
+      const orderNumber = `ORD-${Date.now()}`;
+      const { error } = await supabase.from('orders').insert({
+        order_number: orderNumber,
+        items: orderData.items,
+        total_items: orderData.totalItems,
+        total_price: orderData.totalPrice,
+        payment_method: currentMethod?.label || 'Unknown',
+        status: 'completed'
+      });
+
+      if (error) {
+        console.error('Error saving order:', error);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
+
     closeModal();
     setShowThankYou(true);
     localStorage.removeItem('gxz-cart');
