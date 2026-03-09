@@ -27,3 +27,12 @@ CREATE POLICY "Allow public read" ON public.orders
   FOR SELECT
   TO anon
   USING (true);
+
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS customer_name TEXT,
+  ADD COLUMN IF NOT EXISTS customer_email TEXT,
+  ADD COLUMN IF NOT EXISTS customer_phone TEXT,
+  ADD COLUMN IF NOT EXISTS customer_address TEXT,
+  ADD COLUMN IF NOT EXISTS customer_city TEXT,
+  ADD COLUMN IF NOT EXISTS customer_state TEXT,
+  ADD COLUMN IF NOT EXISTS customer_zip TEXT;

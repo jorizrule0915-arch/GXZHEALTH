@@ -68,12 +68,19 @@ const Checkout = () => {
       customer_state: customerInfo.state,
       customer_zip: customerInfo.zipCode,
       items: orderData.items,
+      total_items: totalItems,        // ✅ FIXED: was missing before
       total_price: totalPrice,
       status: 'processing'
     });
 
     if (error) {
       console.error('Error saving order:', error);
+      toast({
+        title: "Order error",
+        description: error.message,   // ✅ FIXED: shows actual error
+        variant: "destructive"
+      });
+      return;                         // ✅ FIXED: stop if insert failed
     }
 
     const encodedData = encodeURIComponent(JSON.stringify({...orderData, orderNumber}));
