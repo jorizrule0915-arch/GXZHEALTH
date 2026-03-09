@@ -370,7 +370,7 @@ const Payment = () => {
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </div>
-              <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '2rem', fontWeight: '800', marginBottom: '16px' }}>Thank You!</h2>
+              <h2 style={{ fontFamily: 'Inter, sans-serif', fontSize: '2rem', fontWeight: '800', marginBottom: '16px' }}>Thank You!</h2>
               <p style={{ fontSize: '1.125rem', color: '#475569', marginBottom: '16px' }}>
                 Your payment has been received successfully.
               </p>
