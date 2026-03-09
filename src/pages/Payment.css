@@ -230,6 +230,14 @@ main {
   background: linear-gradient(90deg, #008cff, #00c9a7);
 }
 
+.card-apple::before {
+  background: linear-gradient(90deg, #1c1c1e, #636366);
+}
+
+.card-zelle::before {
+  background: linear-gradient(90deg, #6d1ed4, #8b3cf7);
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -254,6 +262,14 @@ main {
 
 .logo-venmo {
   background: linear-gradient(135deg, #008cff, #3dcfc9);
+}
+
+.logo-apple {
+  background: linear-gradient(135deg, #1c1c1e, #48484a);
+}
+
+.logo-zelle {
+  background: linear-gradient(135deg, #6d1ed4, #a855f7);
 }
 
 .card-title {
@@ -356,6 +372,18 @@ main {
   background: linear-gradient(135deg, #008cff, #3dcfc9);
   color: white;
   box-shadow: 0 4px 20px rgba(0,140,255,.35);
+}
+
+.btn-apple {
+  background: linear-gradient(135deg, #1c1c1e, #48484a);
+  color: white;
+  box-shadow: 0 4px 20px rgba(28,28,30,.35);
+}
+
+.btn-zelle {
+  background: linear-gradient(135deg, #6d1ed4, #a855f7);
+  color: white;
+  box-shadow: 0 4px 20px rgba(109,30,212,.35);
 }
 
 .btn-cta:hover {

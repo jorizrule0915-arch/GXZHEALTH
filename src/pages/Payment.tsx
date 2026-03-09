@@ -16,6 +16,15 @@ interface OrderData {
   items: OrderItem[];
   totalItems: number;
   totalPrice: number;
+  customer?: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+  };
 }
 
 const Payment = () => {
@@ -60,6 +69,24 @@ const Payment = () => {
       note: 'powered by Venmo',
       qrType: 'image',
       qrSrc: '/Venmo.png'
+    },
+    apple: {
+      label: 'Apple Pay',
+      color: '#1c1c1e',
+      bg: 'rgba(28,28,30,.08)',
+      title: 'Pay via Apple Pay',
+      desc: 'Contact us for Apple Pay payment link or setup instructions.',
+      note: 'powered by Apple Pay',
+      qrType: 'contact'
+    },
+    zelle: {
+      label: 'Zelle',
+      color: '#6d1ed4',
+      bg: 'rgba(109,30,212,.08)',
+      title: 'Pay via Zelle',
+      desc: 'Contact us for Zelle payment details.',
+      note: 'powered by Zelle',
+      qrType: 'contact'
     }
   };
 
@@ -74,22 +101,35 @@ const Payment = () => {
 
   const confirmPayment = async () => {
     try {
-      // Save order to database
-      const orderNumber = `ORD-${Date.now()}`;
-      const { error } = await supabase.from('orders').insert({
-        order_number: orderNumber,
-        items: orderData.items,
-        total_items: orderData.totalItems,
-        total_price: orderData.totalPrice,
-        payment_method: currentMethod?.label || 'Unknown',
-        status: 'completed'
+      console.log('Sending order email...', orderData);
+      const { data, error } = await supabase.functions.invoke('send-order-email', {
+        body: {
+          orderData: orderData,
+          paymentMethod: currentMethod?.label || 'Unknown'
+        }
       });
-
+      
       if (error) {
-        console.error('Error saving order:', error);
+        console.error('Supabase function error:', error);
+        alert('Email failed to send: ' + error.message);
+        return;
+      }
+      
+      console.log('Email sent successfully:', data);
+
+      // Update order status to complete
+      if (orderData.orderNumber) {
+        await supabase.from('orders')
+          .update({ 
+            status: 'complete',
+            payment_method: currentMethod?.label || 'Unknown'
+          })
+          .eq('order_number', orderData.orderNumber);
       }
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Error sending email:', err);
+      alert('Error: ' + err);
+      return;
     }
 
     closeModal();
@@ -135,11 +175,18 @@ const Payment = () => {
 
         <div className="hero-badge">Payment Guide</div>
         <h1>Complete Your<br/><em>Payment</em></h1>
+        {orderData?.customer && (
+          <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'hsl(var(--secondary))', marginTop: '16px' }}>
+            Welcome, {orderData.customer.name}!
+          </p>
+        )}
         <p>Choose your preferred payment method below. Scan the QR code and complete your order.</p>
 
         <div className="hero-methods">
           <div className="method-pill"><span className="method-pill-dot" style={{background:'#009cde'}}></span>PayPal</div>
           <div className="method-pill"><span className="method-pill-dot" style={{background:'#008cff'}}></span>Venmo</div>
+          <div className="method-pill"><span className="method-pill-dot" style={{background:'#48484a'}}></span>Apple Pay</div>
+          <div className="method-pill"><span className="method-pill-dot" style={{background:'#6d1ed4'}}></span>Zelle</div>
         </div>
       </section>
 
@@ -268,6 +315,88 @@ const Payment = () => {
               Pay ${orderData.totalPrice.toFixed(2)} with Venmo
             </button>
           </div>
+
+          <div className="card card-apple fade-in visible">
+            <div className="card-header">
+              <div className="card-logo-wrap logo-apple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.42c1.29.07 2.17.7 2.96.72.96-.2 1.88-.84 3.0-.9 1.54.12 2.71.68 3.48 1.83C15.03 10.67 15.53 14.78 17.05 20.28zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+              </div>
+              <div>
+                <div className="card-title">Apple Pay <span style={{fontSize:'.7em',color:'var(--blue-500)',fontWeight:'600',background:'var(--blue-50)',padding:'3px 8px',borderRadius:'6px',marginLeft:'6px'}}>Optional</span></div>
+                <div className="card-subtitle">Available Upon Request</div>
+              </div>
+            </div>
+
+            <p className="card-desc">
+              Prefer to pay with Apple Pay? No problem! Contact us and we'll send you a personalized payment link or setup instructions.
+            </p>
+
+            <div className="steps-label">Why Contact Us?</div>
+            <ul className="steps">
+              <li className="step">
+                <span className="step-num">1</span>
+                <span className="step-text">Apple Pay requires <strong>direct contact setup</strong> or a payment link.</span>
+              </li>
+              <li className="step">
+                <span className="step-num">2</span>
+                <span className="step-text">We'll send you a <strong>secure link</strong> or Apple Pay details directly.</span>
+              </li>
+              <li className="step">
+                <span className="step-num">3</span>
+                <span className="step-text">Quick setup takes <strong>less than a minute</strong> — then you're good to go!</span>
+              </li>
+            </ul>
+
+            <a href="https://gxzhealth.com/payment-method/" className="btn-cta btn-apple" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+              Contact Me for Apple Pay
+            </a>
+          </div>
+
+          <div className="card card-zelle fade-in visible">
+            <div className="card-header">
+              <div className="card-logo-wrap logo-zelle">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+                  <path d="M5 5h14l-9 7h9v7H5l9-7H5V5z"/>
+                </svg>
+              </div>
+              <div>
+                <div className="card-title">Zelle <span style={{fontSize:'.7em',color:'var(--blue-500)',fontWeight:'600',background:'var(--blue-50)',padding:'3px 8px',borderRadius:'6px',marginLeft:'6px'}}>Optional</span></div>
+                <div className="card-subtitle">Available Upon Request</div>
+              </div>
+            </div>
+
+            <p className="card-desc">
+              Prefer Zelle for direct bank-to-bank transfers? Contact us and we'll share our Zelle details or send you a payment link.
+            </p>
+
+            <div className="steps-label">Why Contact Us?</div>
+            <ul className="steps">
+              <li className="step">
+                <span className="step-num">1</span>
+                <span className="step-text">Zelle typically requires <strong>email or phone number</strong> to send payments.</span>
+              </li>
+              <li className="step">
+                <span className="step-num">2</span>
+                <span className="step-text">We'll provide our <strong>Zelle information</strong> or a direct payment link.</span>
+              </li>
+              <li className="step">
+                <span className="step-num">3</span>
+                <span className="step-text">Fast, free transfers arrive in <strong>minutes</strong> — no fees involved!</span>
+              </li>
+            </ul>
+
+            <a href="https://gxzhealth.com/payment-method/" className="btn-cta btn-zelle" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+              Contact Me for Zelle
+            </a>
+          </div>
         </div>
       </main>
 
@@ -377,7 +506,11 @@ const Payment = () => {
               <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '32px' }}>
                 A confirmation email will be sent to you shortly with your order details.
               </p>
-              <Link to="/" style={{ display: 'inline-block', padding: '14px 32px', background: '#2563eb', color: 'white', borderRadius: '12px', textDecoration: 'none', fontWeight: '600' }}>
+              <Link 
+                to="/" 
+                onClick={() => localStorage.removeItem('gxz-cart')}
+                style={{ display: 'inline-block', padding: '14px 32px', background: '#2563eb', color: 'white', borderRadius: '12px', textDecoration: 'none', fontWeight: '600' }}
+              >
                 Back to Home
               </Link>
             </div>
@@ -389,3 +522,4 @@ const Payment = () => {
 };
 
 export default Payment;
+

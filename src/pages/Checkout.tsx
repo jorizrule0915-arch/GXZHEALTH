@@ -2,17 +2,30 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, Trash2, Lock, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { supabase } from '@/integrations/supabase/client';
 
 const Checkout = () => {
   const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: ''
+  });
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) {
       toast({
         title: "Cart is empty",
@@ -22,7 +35,16 @@ const Checkout = () => {
       return;
     }
 
-    // Prepare order data
+    if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.address) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const orderNumber = `ORD-${Date.now()}`;
     const orderData = {
       items: items.map(item => ({
         name: item.name,
@@ -31,11 +53,30 @@ const Checkout = () => {
         total: item.price * item.quantity
       })),
       totalItems: totalItems,
-      totalPrice: totalPrice
+      totalPrice: totalPrice,
+      customer: customerInfo
     };
 
-    // Navigate to payment page with order data
-    const encodedData = encodeURIComponent(JSON.stringify(orderData));
+    // Save order to database as "processing"
+    const { error } = await supabase.from('orders').insert({
+      order_number: orderNumber,
+      customer_name: customerInfo.name,
+      customer_email: customerInfo.email,
+      customer_phone: customerInfo.phone,
+      customer_address: customerInfo.address,
+      customer_city: customerInfo.city,
+      customer_state: customerInfo.state,
+      customer_zip: customerInfo.zipCode,
+      items: orderData.items,
+      total_price: totalPrice,
+      status: 'processing'
+    });
+
+    if (error) {
+      console.error('Error saving order:', error);
+    }
+
+    const encodedData = encodeURIComponent(JSON.stringify({...orderData, orderNumber}));
     navigate(`/payment?order=${encodedData}`);
   };
 
@@ -74,8 +115,89 @@ const Checkout = () => {
               </div>
             ) : (
               <div className="grid lg:grid-cols-3 gap-8">
-                {/* Cart Items */}
+                {/* Cart Items & Customer Info */}
                 <div className="lg:col-span-2 space-y-4">
+                  {/* Customer Information Form */}
+                  <div className="bg-card rounded-2xl border border-border p-6">
+                    <h2 className="font-semibold mb-4">Shipping Information</h2>
+                    <div className="grid gap-4">
+                      <div>
+                        <Label htmlFor="name">Full Name *</Label>
+                        <Input
+                          id="name"
+                          value={customerInfo.name}
+                          onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                          placeholder="John Doe"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="email">Email *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={customerInfo.email}
+                            onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                            placeholder="john@example.com"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="phone">Phone *</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={customerInfo.phone}
+                            onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                            placeholder="(555) 123-4567"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="address">Address *</Label>
+                        <Input
+                          id="address"
+                          value={customerInfo.address}
+                          onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
+                          placeholder="123 Main St"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            value={customerInfo.city}
+                            onChange={(e) => setCustomerInfo({...customerInfo, city: e.target.value})}
+                            placeholder="New York"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="state">State</Label>
+                          <Input
+                            id="state"
+                            value={customerInfo.state}
+                            onChange={(e) => setCustomerInfo({...customerInfo, state: e.target.value})}
+                            placeholder="NY"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="zipCode">Zip Code</Label>
+                          <Input
+                            id="zipCode"
+                            value={customerInfo.zipCode}
+                            onChange={(e) => setCustomerInfo({...customerInfo, zipCode: e.target.value})}
+                            placeholder="10001"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cart Items */}
                   <div className="bg-card rounded-2xl border border-border overflow-hidden">
                     <div className="p-6 border-b border-border">
                       <h2 className="font-semibold">Order Items ({totalItems})</h2>
