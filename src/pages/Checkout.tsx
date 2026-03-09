@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Minus, Plus, Trash2, Lock, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
@@ -10,6 +10,7 @@ import Footer from '@/components/layout/Footer';
 const Checkout = () => {
   const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleCheckout = () => {
     if (items.length === 0) {
@@ -21,7 +22,21 @@ const Checkout = () => {
       return;
     }
 
-    window.location.href = 'https://payment-method.gxzpeptides.com/';
+    // Prepare order data
+    const orderData = {
+      items: items.map(item => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.price * item.quantity
+      })),
+      totalItems: totalItems,
+      totalPrice: totalPrice
+    };
+
+    // Navigate to payment page with order data
+    const encodedData = encodeURIComponent(JSON.stringify(orderData));
+    navigate(`/payment?order=${encodedData}`);
   };
 
   return (
