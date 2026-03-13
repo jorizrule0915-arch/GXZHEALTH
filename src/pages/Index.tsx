@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import heroBg from '@/assets/hero-bg.jpg';
-import productPen from '@/assets/products/reusable-pen.jpeg';
+import productPen from '@/assets/products/reusable-pen.png';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
