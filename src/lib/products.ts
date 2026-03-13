@@ -1,7 +1,7 @@
-import syringeImage from '@/assets/products/syringe.jpg';
-import cartridgeImage from '@/assets/products/cartridge.jpg';
-import penImage from '@/assets/products/reusable-pen.jpeg';
-import needlesImage from '@/assets/products/needles.jpg';
+import syringeImage from '@/assets/products/syringe.png';
+import cartridgeImage from '@/assets/products/cartridge.png';
+import penImage from '@/assets/products/reusable-pen.png';
+import needlesImage from '@/assets/products/needles.png';
 import bodyBalmImage from '@/assets/products/Body Balm.jpg';
 import creatineImage from '@/assets/products/Creatine.jpg';
 
