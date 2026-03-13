@@ -23,6 +23,7 @@ const Navbar = () => {
     { path: '/products', label: 'Products' },
     { path: '/how-to-use', label: 'How to Use' },
     { path: '/about', label: 'About' },
+    { path: '/returnandrefundpolicy', label: 'Return & Refund Policy' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

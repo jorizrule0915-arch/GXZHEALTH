@@ -15,6 +15,7 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import Payment from "./pages/Payment";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import ReturnAndRefundPolicy from './pages/ReturnAndRefundPolicy';
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/payment" element={<Payment />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/checkout-success" element={<CheckoutSuccess />} />
+            <Route path="/returnandrefundpolicy" element={<ReturnAndRefundPolicy />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
