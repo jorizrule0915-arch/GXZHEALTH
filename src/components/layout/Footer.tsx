@@ -23,7 +23,7 @@ const Footer = () => {
             </p>
             <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg text-xs">
               <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
-              <span className="text-white/80">For Research Use Only</span>
+              <span className="text-white/80">Premium Performance & Wellness Products</span>
             </div>
           </div>
 
@@ -59,6 +59,8 @@ const Footer = () => {
                 'Pen Cartridges',
                 'Single-Use Needles',
                 'Syringes',
+                'GXZ Health Nourishing Body Balm',
+                'GXZ Health Creatine',
               ].map((product) => (
                 <li key={product}>
                   <Link
@@ -104,9 +106,6 @@ const Footer = () => {
         <div className="container mx-auto px-6 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
             <p>© {new Date().getFullYear()} GXZ Health. All rights reserved.</p>
-            <p className="text-center md:text-right text-xs">
-              Products are not FDA approved.
-            </p>
           </div>
         </div>
       </div>

@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield, Truck, Award, Beaker, Syringe, CircleDot, Package } from 'lucide-react';
+import { ArrowRight, Shield, Truck, Award, Beaker, Syringe, CircleDot, Package, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import heroBg from '@/assets/hero-bg.jpg';
-import productPen from '@/assets/products/reusable-pen.png';
+import heroBg from '@/assets/hero-bg.png';
+import productcreatine from '@/assets/products/Creatine.jpg';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -58,9 +58,9 @@ const Index = () => {
 
   const features = [
     {
-      icon: Shield,
-      title: 'Research Grade',
-      description: 'Premium quality tools designed for precision research applications'
+      icon: Star,
+      title: 'Premium Grade',
+      description: 'High-quality products crafted to meet the highest standards of performance and reliability'
     },
     {
       icon: Truck,
@@ -105,7 +105,7 @@ const Index = () => {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-sm mb-8"
               >
                 <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
-                <span>Research-Grade Supplies</span>
+                <span> Health & Performance Essentials</span>
               </motion.div>
               
               <motion.h1 
@@ -114,7 +114,7 @@ const Index = () => {
               >
                 Precision Tools for{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-teal-500">
-                  Research
+                   Performance
                 </span>
               </motion.h1>
               
@@ -122,7 +122,7 @@ const Index = () => {
                 variants={fadeInUp}
                 className="text-lg md:text-xl text-white/80 leading-relaxed mb-8 max-w-xl"
               >
-                Premium reusable injection pens, cartridges, and accessories for scientific research and development. Trusted by researchers worldwide.
+                Premium products designed to support precision, consistency, and everyday wellness.
               </motion.p>
               
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4 mb-12">
@@ -167,14 +167,15 @@ const Index = () => {
                 {/* Product image */}
                 <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20">
                   <img 
-                    src={productPen} 
-                    alt="Reusable Injection Pen" 
-                    className="w-full h-auto rounded-2xl"
+                    src={productcreatine} 
+                    alt="Creatine Performance Matrix Powder" 
+                    className="w-full rounded-2xl object-cover object-center"
+                    style={{ maxHeight: '420px' }}
                   />
                   
                   {/* Floating badge */}
                   <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white px-6 py-3 rounded-xl shadow-glow">
-                    <span className="font-semibold">Starting at $20</span>
+                    <span className="font-semibold">Starting at $29.99</span>
                   </div>
                 </div>
               </div>
@@ -205,7 +206,7 @@ const Index = () => {
           >
             <span className="text-secondary font-semibold text-sm uppercase tracking-wider">Our Catalog</span>
             <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mt-4 mb-6">
-              Research Supplies
+              Premium Supplies
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Performance & Wellness Essentials
@@ -319,7 +320,7 @@ const Index = () => {
               Ready to Get Started?
             </h2>
             <p className="text-white/80 text-lg mb-8">
-              Explore our complete range of research-grade injection supplies and accessories.
+              Explore our Health Premium Performance & Wellness Products
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button asChild variant="hero" size="lg">
@@ -335,16 +336,6 @@ const Index = () => {
               </Button>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Disclaimer */}
-      <section className="py-6 bg-navy-900">
-        <div className="container mx-auto px-6">
-          <p className="text-center text-white/50 text-sm">
-            <strong className="text-white/70">Disclaimer:</strong> Products are intended for research purposes only. 
-            Not FDA approved. Not intended for medical, clinical, or insulin use on humans or animals.
-          </p>
         </div>
       </section>
 

@@ -378,7 +378,7 @@ const HowToUse = () => {
       {/* CTA */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-6 text-center">
-          <p className="text-muted-foreground mb-6">Need supplies for your research?</p>
+          <p className="text-muted-foreground mb-6">Shop our full range of performance and wellness products.</p>
           <Button asChild variant="default" size="lg">
             <Link to="/products">
               View Our Products

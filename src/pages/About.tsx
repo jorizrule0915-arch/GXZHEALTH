@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Target, Users, Shield, Award, Beaker, ArrowRight, BookOpen, Truck } from 'lucide-react';
+import { Target, Users, Shield, Award, Beaker, ArrowRight, BookOpen, Truck, Zap, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -15,45 +15,45 @@ const About = () => {
     {
       icon: Target,
       title: 'Precision',
-      description: 'Every product engineered for accurate, consistent results in research applications.'
+      description: 'Every product crafted for consistent, reliable results that support your wellness goals.'
     },
     {
       icon: Shield,
       title: 'Quality',
-      description: 'Rigorous quality control ensures our products meet the highest standards.'
+      description: 'Rigorous quality control ensures our products meet the highest standards of performance.'
     },
     {
       icon: Users,
       title: 'Support',
-      description: 'Comprehensive guides and responsive customer service for all users.'
+      description: 'Comprehensive guides and responsive customer service for every customer.'
     },
     {
       icon: Award,
       title: 'Trust',
-      description: 'Trusted by researchers worldwide for reliable, research-grade supplies.'
+      description: 'Trusted by wellness enthusiasts worldwide for premium, reliable products.'
     }
   ];
 
   const offerings = [
     {
-      icon: Beaker,
-      title: 'Reusable Injection Pens',
-      description: 'Precision-engineered metal pens with adjustable dosing dials for accurate delivery.'
+      icon: Zap,
+      title: 'Performance Supplements',
+      description: 'Science-backed formulations designed to boost strength, endurance, and hydration.'
+    },
+    {
+      icon: Heart,
+      title: 'Body Care Products',
+      description: 'Premium body care essentials crafted to nourish, restore, and support daily wellness.'
     },
     {
       icon: Beaker,
-      title: 'Pen Cartridges',
-      description: 'Standard 3mL capacity cartridges compatible with all GXZ pens.'
+      title: 'Wellness Accessories',
+      description: 'High-quality tools and accessories built for precision and everyday performance.'
     },
     {
-      icon: Beaker,
-      title: 'Single-Use Needles',
-      description: 'Ultra-fine sterile needles in various sizes for optimal precision.'
-    },
-    {
-      icon: Beaker,
-      title: 'Syringes & Accessories',
-      description: 'Complete range of supporting supplies for your research needs.'
+      icon: Truck,
+      title: 'Fast & Discreet Shipping',
+      description: 'Quick delivery straight to your door, so you never miss a step in your routine.'
     }
   ];
 
@@ -81,16 +81,16 @@ const About = () => {
             </span>
             
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              Research-Grade Supplies for{' '}
+              Premium Products for{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-teal-500">
-                Scientific Excellence
+                Everyday Wellness
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-white/80 leading-relaxed">
-              GXZ Health provides premium injection supplies designed specifically for research 
-              and development applications. Our commitment to quality helps researchers achieve 
-              accurate, reliable results.
+              GXZ Health provides premium wellness supplements and body care products designed 
+              to support precision, consistency, and everyday performance. Our commitment to 
+              quality helps you feel and perform at your best.
             </p>
           </motion.div>
         </div>
@@ -108,22 +108,23 @@ const About = () => {
             >
               <span className="text-secondary font-semibold text-sm uppercase tracking-wider">Who We Are</span>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mt-4 mb-6">
-                Your Trusted Partner in Research Supplies
+                Your Trusted Partner in Health & Wellness
               </h2>
               <div className="space-y-4 text-muted-foreground leading-relaxed">
                 <p>
-                  GXZ Health was founded with a clear mission: to provide researchers with high-quality, 
-                  reusable injection tools that deliver precision and reliability. We understand that 
-                  accurate dosing is critical to research success.
+                  GXZ Health was founded with a clear mission: to provide individuals with high-quality 
+                  wellness products that deliver real results. We believe that feeling strong, recovered, 
+                  and energized every day shouldn't be complicated.
                 </p>
                 <p>
-                  Our product line includes precision-engineered metal injection pens, compatible cartridges, 
-                  single-use needles, and essential accessories. Each product is designed to meet the 
-                  demanding requirements of scientific research.
+                  Our product line includes performance supplements, nourishing body care essentials, 
+                  and precision wellness accessories. Each product is formulated and crafted to meet 
+                  the demands of an active, health-conscious lifestyle.
                 </p>
                 <p>
-                  We also provide comprehensive usage guides to ensure researchers—especially those new 
-                  to injection pen systems—can achieve optimal results from day one.
+                  We also provide comprehensive usage guides to ensure every customer — whether new 
+                  to wellness products or experienced — gets the most out of every GXZ Health product 
+                  from day one.
                 </p>
               </div>
               
@@ -181,10 +182,11 @@ const About = () => {
           >
             <span className="text-secondary font-semibold text-sm uppercase tracking-wider">What We Offer</span>
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mt-4 mb-6">
-              Complete Research Supply Solutions
+              Complete Performance & Wellness Solutions
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              From precision pens to sterile accessories, we provide everything you need for your research applications.
+              From performance supplements to body care essentials, we provide everything you need 
+              to support your strength, recovery, and daily wellness.
             </p>
           </motion.div>
 
@@ -214,50 +216,6 @@ const About = () => {
         </div>
       </section>
 
-      {/* Responsible Use Section */}
-      <section className="py-24 bg-background">
-        <div className="container mx-auto px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-4xl mx-auto"
-          >
-            <div className="bg-gradient-to-br from-primary/5 via-secondary/5 to-primary/5 rounded-3xl p-8 md:p-12 border border-border">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-amber-500" />
-                </div>
-                <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">
-                  Responsible Use Statement
-                </h2>
-              </div>
-              
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p className="text-lg">
-                  Our injection pens and accessories are intended <strong className="text-foreground">solely for legitimate research purposes</strong>.
-                </p>
-                <p>
-                  These products are <strong className="text-foreground">not FDA approved</strong> and are not intended for 
-                  medical, clinical, or insulin use on humans or animals. They are precision tools 
-                  designed for controlled research environments.
-                </p>
-                <p>
-                  It is the researcher's responsibility to ensure all products are used in full 
-                  compliance with applicable laws, institutional guidelines, and research protocols.
-                </p>
-              </div>
-              
-              <div className="mt-8 pt-6 border-t border-border">
-                <p className="text-sm text-muted-foreground">
-                  By purchasing our products, you confirm that you understand and accept these terms of use.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-br from-primary via-navy-800 to-navy-900">
         <div className="container mx-auto px-6">
@@ -268,10 +226,10 @@ const About = () => {
             className="text-center max-w-3xl mx-auto"
           >
             <h2 className="font-display text-3xl md:text-4xl font-bold text-white mb-6">
-              Ready to Start Your Research?
+              Ready to Elevate Your Wellness?
             </h2>
             <p className="text-white/80 text-lg mb-8">
-              Explore our product catalog or learn how to use our injection pens with our comprehensive guides.
+              Explore our product catalog or learn how to get the most out of every GXZ Health product with our comprehensive guides.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button asChild variant="hero" size="lg">
