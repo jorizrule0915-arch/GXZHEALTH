@@ -208,7 +208,8 @@ const Index = () => {
               Research Supplies
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Quality tools for precision research. All products designed for accuracy and reliability.
+              Performance & Wellness Essentials
+              High-quality tools and formulations designed to support strength, recovery, and daily performance.
             </p>
           </motion.div>
 

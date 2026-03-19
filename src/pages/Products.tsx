@@ -86,8 +86,8 @@ const Products = () => {
               Research Supplies
             </h1>
             <p className="text-muted-foreground text-lg leading-relaxed">
-              Professional-grade injection supplies and accessories designed for precision, 
-              safety, and reliability in research applications.
+              Performance & Wellness Essentials
+              High-quality tools and formulations designed to support strength, recovery, and daily performance.
             </p>
             
             {/* Stats */}
@@ -202,19 +202,6 @@ const Products = () => {
               <ArrowRight className="w-5 h-5" />
             </Button>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Disclaimer */}
-      <section className="py-8 bg-muted">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-muted-foreground text-sm">
-              <strong>Research Use Only:</strong> All products are intended for research purposes only. 
-              Not intended for medical, clinical, or insulin use on humans or animals.
-              Ensure compliance with all applicable laws and institutional guidelines.
-            </p>
-          </div>
         </div>
       </section>
 

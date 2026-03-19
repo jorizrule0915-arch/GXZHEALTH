@@ -18,7 +18,8 @@ const Footer = () => {
               <span className="font-display text-xl font-bold">GXZ HEALTH</span>
             </div>
             <p className="text-white/70 text-sm leading-relaxed">
-              Premium research-grade injection supplies. Quality tools for scientific research and development.
+              GXZ Health Premium Performance & Wellness Products
+              High-quality tools and formulations designed for precision, reliability, and daily performance.
             </p>
             <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg text-xs">
               <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
@@ -104,7 +105,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
             <p>© {new Date().getFullYear()} GXZ Health. All rights reserved.</p>
             <p className="text-center md:text-right text-xs">
-              Products are not FDA approved. For research purposes only.
+              Products are not FDA approved.
             </p>
           </div>
         </div>
