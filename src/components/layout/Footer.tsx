@@ -85,12 +85,12 @@ const Footer = () => {
               <li className="flex items-start gap-3 text-sm">
                 <ExternalLink className="w-4 h-4 text-teal-400 mt-0.5" />
                 <a 
-                  href="https://gxzpeptides.com" 
+                  href="https://health.gxzhealth.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-white/70 hover:text-white transition-colors"
                 >
-                  gxzhealth.com
+                  Health.gxzhealth.com
                 </a>
               </li>
             </ul>
