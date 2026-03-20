@@ -4,6 +4,13 @@ import { X, ChevronLeft, ChevronRight, ShoppingCart, Shield, Truck, RotateCcw, C
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import creatineImg from '@/assets/products/Creatine.jpg';
+import creatineSide1 from '@/assets/products/side1.png';
+import creatineSide2 from '@/assets/products/side2.png';
+import creatineLifestyle from '@/assets/products/lifestylecreatine.jpeg';
+import bodyBalmImg from '@/assets/products/Body Balm.jpg';
+import backBalmImg from '@/assets/products/backbalm.png';
+import lifestyleBalmImg from '@/assets/products/lifestylebalm.png';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,23 +77,20 @@ function getBaseProduct(p: ProductDetail) {
 // ─── Placeholder image generator (replace with real product photos) ───────────
 
 function getPlaceholderImages(productId: string): string[] {
-  // These use picsum with fixed seeds so they're consistent.
-  // Replace each URL with your actual product images.
   const seeds: Record<string, string[]> = {
     'creatine': [
-    '/src/assets/products/creatine.jpg',
-    '/src/assets/products/side1.png',
-    '/src/assets/products/side2.png',
-    '/src/assets/products/lifestylecreatine.jpeg',
+      creatineImg,
+      creatineSide1,
+      creatineSide2,
+      creatineLifestyle,
     ],
     'body-balm': [
-    '/src/assets/products/Body Balm.jpg',
-    '/src/assets/products/backbalm.png',
-    '/src/assets/products/lifestylebalm.png',
-  
+      bodyBalmImg,
+      backBalmImg,
+      lifestyleBalmImg,
     ],
   };
-  return seeds[productId] ?? Array(5).fill('https://placehold.co/600x600/f0f0f0/999?text=Product');
+  return seeds[productId] ?? Array(5).fill(bodyBalmImg);
 }
 
 // ─── Image Carousel ───────────────────────────────────────────────────────────
