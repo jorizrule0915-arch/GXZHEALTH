@@ -3,6 +3,9 @@ import { useLocation, Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import './Payment.css';
 
 interface OrderItem {
@@ -16,6 +19,7 @@ interface OrderData {
   items: OrderItem[];
   totalItems: number;
   totalPrice: number;
+  orderNumber?: string;
   customer?: {
     name: string;
     email: string;
@@ -34,6 +38,12 @@ const Payment = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentMethod, setCurrentMethod] = useState<any>(null);
   const [showThankYou, setShowThankYou] = useState(false);
+  
+  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
+  const [contactMethod, setContactMethod] = useState<any>(null);
+  const [contactData, setContactData] = useState({ name: '', email: '', phone: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contactFormSuccess, setContactFormSuccess] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -119,7 +129,7 @@ const Payment = () => {
 
       // Update order status to complete
       if (orderData.orderNumber) {
-        await supabase.from('orders')
+        await (supabase.from('orders') as any)
           .update({ 
             status: 'complete',
             payment_method: currentMethod?.label || 'Unknown'
@@ -140,6 +150,66 @@ const Payment = () => {
       title: "Payment Confirmed!",
       description: "Thank you for your order."
     });
+  };
+
+  const openContactForm = (method: string) => {
+    setContactMethod(methodData[method as keyof typeof methodData]);
+    if (orderData?.customer) {
+      setContactData({
+        name: orderData.customer.name || '',
+        email: orderData.customer.email || '',
+        phone: orderData.customer.phone || ''
+      });
+    }
+    setIsContactFormOpen(true);
+  };
+
+  const submitContactForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const updatedOrderData = {
+        ...orderData!,
+        customer: { ...orderData?.customer, ...contactData } // Ensure contact info is defined securely
+      } as OrderData;
+
+      const { data, error } = await supabase.functions.invoke('send-order-email', {
+        body: {
+          orderData: updatedOrderData,
+          paymentMethod: contactMethod?.label || 'Unknown'
+        }
+      });
+      
+      if (error) {
+        console.error('Supabase function error:', error);
+        alert('Email failed to send: ' + error.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (orderData?.orderNumber) {
+        // Also update the order status
+        await (supabase.from('orders') as any)
+          .update({ 
+            status: 'complete',
+            payment_method: contactMethod?.label || 'Unknown',
+            customer_name: contactData.name,
+            customer_email: contactData.email,
+            customer_phone: contactData.phone
+          })
+          .eq('order_number', orderData.orderNumber);
+      }
+      
+      setIsSubmitting(false);
+      setIsContactFormOpen(false);
+      setShowThankYou(true);
+      setContactFormSuccess(true);
+      localStorage.removeItem('gxz-cart');
+    } catch (err) {
+      console.error('Error sending email:', err);
+      alert('Error: ' + err);
+      setIsSubmitting(false);
+    }
   };
 
   if (!orderData) {
@@ -349,12 +419,12 @@ const Payment = () => {
               </li>
             </ul>
 
-            <a href="https://gxzhealth.com/payment-method/" className="btn-cta btn-apple" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+            <button className="btn-cta btn-apple" onClick={() => openContactForm('apple')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
               </svg>
               Contact Me for Apple Pay
-            </a>
+            </button>
           </div>
 
           <div className="card card-zelle fade-in visible">
@@ -390,12 +460,12 @@ const Payment = () => {
               </li>
             </ul>
 
-            <a href="https://gxzhealth.com/payment-method/" className="btn-cta btn-zelle" target="_blank" rel="noopener noreferrer" style={{textDecoration:'none'}}>
+            <button className="btn-cta btn-zelle" onClick={() => openContactForm('zelle')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
               </svg>
               Contact Me for Zelle
-            </a>
+            </button>
           </div>
         </div>
       </main>
@@ -489,6 +559,57 @@ const Payment = () => {
         </div>
       )}
 
+      {/* Contact Form Modal */}
+      {isContactFormOpen && contactMethod && (
+        <div className="modal-overlay active" onClick={() => setIsContactFormOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%' }}>
+            <button className="modal-close" onClick={() => setIsContactFormOpen(false)}>
+              <X size={16} />
+            </button>
+
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.8rem', fontWeight: '800', marginBottom: '24px', color: '#0a1628' }}>Payment Method</h2>
+            
+            <form onSubmit={submitContactForm} style={{ textAlign: 'left' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <Label htmlFor="contact-name" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}>Name <span style={{color: '#ef4444'}}>*</span></Label>
+                <Input
+                  id="contact-name"
+                  value={contactData.name}
+                  onChange={(e) => setContactData({ ...contactData, name: e.target.value })}
+                  placeholder="Name"
+                  required
+                />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <Label htmlFor="contact-email" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}>Email Address <span style={{color: '#ef4444'}}>*</span></Label>
+                <Input
+                  id="contact-email"
+                  type="email"
+                  value={contactData.email}
+                  onChange={(e) => setContactData({ ...contactData, email: e.target.value })}
+                  placeholder="Email"
+                  required
+                />
+              </div>
+              <div style={{ marginBottom: '30px' }}>
+                <Label htmlFor="contact-phone" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}>Phone <span style={{color: '#ef4444'}}>*</span></Label>
+                <Input
+                  id="contact-phone"
+                  type="tel"
+                  value={contactData.phone}
+                  onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
+                  placeholder="Phone"
+                  required
+                />
+              </div>
+              <Button type="submit" size="lg" style={{ width: '100%', fontSize: '1.1rem' }} disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Thank You Modal */}
       {showThankYou && (
         <div className="modal-overlay active" onClick={() => setShowThankYou(false)}>
@@ -500,11 +621,15 @@ const Payment = () => {
                 </svg>
               </div>
               <h2 style={{ fontFamily: 'Inter, sans-serif', fontSize: '2rem', fontWeight: '800', marginBottom: '16px' }}>Thank You!</h2>
-              <p style={{ fontSize: '1.125rem', color: '#475569', marginBottom: '16px' }}>
-                Your payment has been received successfully.
-              </p>
-              <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginBottom: '32px' }}>
-                A confirmation email will be sent to you shortly with your order details.
+              {contactFormSuccess ? null : (
+                <p style={{ fontSize: '1.125rem', color: '#475569', marginBottom: '16px' }}>
+                  Your payment has been received successfully.
+                </p>
+              )}
+              <p style={{ fontSize: contactFormSuccess ? '1.125rem' : '0.875rem', color: contactFormSuccess ? '#475569' : '#94a3b8', marginBottom: '32px' }}>
+                {contactFormSuccess 
+                  ? "Please check your email, the payment details for your order have been sent to you."
+                  : "A confirmation email will be sent to you shortly with your order details."}
               </p>
               <Link 
                 to="/" 
