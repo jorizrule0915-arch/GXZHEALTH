@@ -14,7 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          id: string
+          order_number: string
+          items: Json
+          total_items: number
+          total_price: number
+          payment_method: string | null
+          status: string
+          created_at: string
+          customer_name: string | null
+          customer_email: string | null
+          customer_phone: string | null
+          customer_address: string | null
+          customer_city: string | null
+          customer_state: string | null
+          customer_zip: string | null
+        }
+        Insert: {
+          id?: string
+          order_number: string
+          items: Json
+          total_items: number
+          total_price: number
+          payment_method?: string | null
+          status?: string
+          created_at?: string
+          customer_name?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+        }
+        Update: {
+          id?: string
+          order_number?: string
+          items?: Json
+          total_items?: number
+          total_price?: number
+          payment_method?: string | null
+          status?: string
+          created_at?: string
+          customer_name?: string | null
+          customer_email?: string | null
+          customer_phone?: string | null
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
