@@ -19,7 +19,13 @@ serve(async (req) => {
     
     const { orderData, paymentMethod } = await req.json()
     
-    const orderNumber = `ORD-${Date.now()}`
+    const orderNumber = orderData.orderNumber || `ORD-${Date.now()}`
+    const subtotal = typeof orderData.subtotal === 'number'
+      ? orderData.subtotal
+      : orderData.items.reduce((sum: number, item: any) => sum + item.total, 0)
+    const shippingCost = typeof orderData.shippingCost === 'number'
+      ? orderData.shippingCost
+      : Math.max(orderData.totalPrice - subtotal, 0)
     const itemsListHtml = orderData.items.map((item: any) => 
       `<tr>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${item.name}</td>
@@ -101,6 +107,14 @@ serve(async (req) => {
                 <tr>
                   <td style="padding: 0 30px 30px 30px;">
                     <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #eff6ff; border-radius: 8px; padding: 20px;">
+                      <tr>
+                        <td style="color: #64748b; font-size: 14px; padding-bottom: 10px;">Subtotal</td>
+                        <td style="color: #0f172a; font-size: 14px; font-weight: 700; text-align: right; padding-bottom: 10px;">$${subtotal.toFixed(2)}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-size: 14px; padding-bottom: 16px;">Shipping</td>
+                        <td style="color: #0f172a; font-size: 14px; font-weight: 700; text-align: right; padding-bottom: 16px;">$${shippingCost.toFixed(2)}</td>
+                      </tr>
                       <tr>
                         <td style="color: #1e40af; font-size: 18px; font-weight: 700;">Total Amount</td>
                         <td style="color: #2563eb; font-size: 28px; font-weight: 800; text-align: right;">$${orderData.totalPrice.toFixed(2)}</td>

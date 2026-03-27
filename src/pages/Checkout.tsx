@@ -10,11 +10,14 @@ import { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
+import { calculateOrderTotal, calculateShippingCost } from '@/lib/pricing';
 
 const Checkout = () => {
   const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const shippingCost = calculateShippingCost(totalItems);
+  const orderTotal = calculateOrderTotal(totalPrice, totalItems);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -53,7 +56,9 @@ const Checkout = () => {
         total: item.price * item.quantity
       })),
       totalItems: totalItems,
-      totalPrice: totalPrice,
+      subtotal: totalPrice,
+      shippingCost: shippingCost,
+      totalPrice: orderTotal,
       customer: customerInfo
     };
 
@@ -68,8 +73,8 @@ const Checkout = () => {
       customer_state: customerInfo.state,
       customer_zip: customerInfo.zipCode,
       items: orderData.items,
-      total_items: totalItems,        // ✅ FIXED: was missing before
-      total_price: totalPrice,
+      total_items: totalItems,
+      total_price: orderTotal,
       status: 'processing'
     });
 
@@ -269,13 +274,13 @@ const Checkout = () => {
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span className="text-secondary">Calculated at checkout</span>
+                        <span>${shippingCost.toFixed(2)} USD</span>
                       </div>
                     </div>
                     
                     <div className="flex justify-between py-6">
                       <span className="font-semibold">Total</span>
-                      <span className="font-display text-2xl font-bold">${totalPrice.toFixed(2)} USD</span>
+                      <span className="font-display text-2xl font-bold">${orderTotal.toFixed(2)} USD</span>
                     </div>
                     
                     <Button 

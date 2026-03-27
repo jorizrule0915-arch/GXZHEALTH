@@ -18,6 +18,8 @@ interface OrderItem {
 interface OrderData {
   items: OrderItem[];
   totalItems: number;
+  subtotal?: number;
+  shippingCost?: number;
   totalPrice: number;
   orderNumber?: string;
   customer?: {
@@ -224,6 +226,9 @@ const Payment = () => {
     );
   }
 
+  const subtotal = orderData.subtotal ?? orderData.items.reduce((sum, item) => sum + item.total, 0);
+  const shippingCost = orderData.shippingCost ?? Math.max(orderData.totalPrice - subtotal, 0);
+
   return (
     <div>
       <header>
@@ -275,6 +280,17 @@ const Payment = () => {
                 <div style={{ fontWeight: '600', color: '#1e293b' }}>${item.total.toFixed(2)}</div>
               </div>
             ))}
+          </div>
+
+          <div style={{ display: 'grid', gap: '12px', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '0.95rem' }}>
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '0.95rem' }}>
+              <span>Shipping</span>
+              <span>${shippingCost.toFixed(2)}</span>
+            </div>
           </div>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '24px', borderTop: '2px solid #1e293b', marginTop: '16px' }}>

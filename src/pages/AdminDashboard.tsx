@@ -358,6 +358,14 @@ export default function AdminDashboard() {
                 <TableBody>
                   {filteredOrders.map(order => {
                     const isExpanded = expandedRow === order.id;
+                    const orderItems = order.items as OrderItem[];
+                    const orderSubtotal = orderItems.reduce(
+                      (sum, item) => sum + Number(item.total ?? item.price * item.quantity),
+                      0
+                    );
+                    const orderTotal = Number(order.total_price);
+                    const shippingCost = Math.max(orderTotal - orderSubtotal, 0);
+
                     return (
                       <>
                         <TableRow
@@ -382,7 +390,7 @@ export default function AdminDashboard() {
                             {order.total_items} item{order.total_items !== 1 ? 's' : ''}
                           </TableCell>
                           <TableCell className="font-bold text-emerald-400">
-                            ${Number(order.total_price).toFixed(2)}
+                            ${orderTotal.toFixed(2)}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell text-slate-400 text-sm">
                             {order.payment_method ?? '—'}
@@ -443,7 +451,7 @@ export default function AdminDashboard() {
                                     Items Ordered
                                   </p>
                                   <div className="space-y-1.5">
-                                    {(order.items as OrderItem[]).map((item, i) => (
+                                    {orderItems.map((item, i) => (
                                       <div key={i} className="flex items-center justify-between text-sm">
                                         <div className="text-slate-300">
                                           <span className="text-slate-500 mr-2">×{item.quantity}</span>
@@ -454,10 +462,26 @@ export default function AdminDashboard() {
                                         </span>
                                       </div>
                                     ))}
+                                    {shippingCost > 0 && (
+                                      <>
+                                        <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-700 mt-2">
+                                          <span className="text-slate-400 font-medium">Subtotal</span>
+                                          <span className="text-slate-300">
+                                            ${orderSubtotal.toFixed(2)}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-slate-400 font-medium">Shipping</span>
+                                          <span className="text-slate-300">
+                                            ${shippingCost.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      </>
+                                    )}
                                     <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-700 mt-2">
                                       <span className="text-slate-400 font-medium">Total</span>
                                       <span className="text-white font-bold">
-                                        ${Number(order.total_price).toFixed(2)}
+                                        ${orderTotal.toFixed(2)}
                                       </span>
                                     </div>
                                   </div>
