@@ -44,6 +44,29 @@ interface Order {
   customer_zip: string | null;
 }
 
+function isOrderItem(value: unknown): value is OrderItem {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<OrderItem>;
+
+  return (
+    typeof candidate.name === 'string' &&
+    typeof candidate.price === 'number' &&
+    typeof candidate.quantity === 'number' &&
+    typeof candidate.total === 'number'
+  );
+}
+
+function parseOrderItems(value: unknown): OrderItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isOrderItem);
+}
+
 const ADMIN_PASSWORD = 'gxzhealth2025';
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -160,7 +183,14 @@ export default function AdminDashboard() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data) setOrders(data as Order[]);
+    if (!error && data) {
+      const normalizedOrders: Order[] = data.map((order) => ({
+        ...order,
+        items: parseOrderItems(order.items),
+      }));
+
+      setOrders(normalizedOrders);
+    }
     setLoading(false);
     setRefreshing(false);
   };

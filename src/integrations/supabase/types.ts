@@ -75,6 +75,7 @@ export type Database = {
           customer_state?: string | null
           customer_zip?: string | null
         }
+        Relationships: []
       }
     }
     Views: {

@@ -1,13 +1,32 @@
-import { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  CreditCard,
+  Landmark,
+  Lock,
+  QrCode,
+  Receipt,
+  ScanLine,
+  ShieldCheck,
+  Smartphone,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import RecaptchaWidget from '@/components/RecaptchaWidget';
-import './Payment.css';
 
 interface OrderItem {
   name: string;
@@ -39,22 +58,149 @@ interface PaymentProof {
   accountName: string;
 }
 
+type MethodKey = 'paypal' | 'venmo' | 'apple' | 'zelle';
+
+interface PaymentMethod {
+  label: string;
+  subtitle: string;
+  description: string;
+  icon: LucideIcon;
+  mode: 'proof' | 'contact';
+  qrSrc?: string;
+  gradientClass: string;
+  iconClass: string;
+  badgeClass: string;
+  buttonClass: string;
+  actionLabel: string;
+  helperLabel: string;
+  steps: string[];
+}
+
+const fadeInUp = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
+
+const methodData: Record<MethodKey, PaymentMethod> = {
+  paypal: {
+    label: 'PayPal',
+    subtitle: 'Scan, pay, and submit proof right away',
+    description: 'Best for buyers who want a quick QR-based payment flow and can provide a transaction reference immediately.',
+    icon: CreditCard,
+    mode: 'proof',
+    qrSrc: '/paypal.jpeg',
+    gradientClass: 'from-[#003087] via-[#005ea6] to-[#009cde]',
+    iconClass: 'bg-[#003087] text-white',
+    badgeClass: 'border-[#003087]/20 bg-[#003087]/10 text-[#003087]',
+    buttonClass: 'bg-[#003087] text-white hover:bg-[#00266f]',
+    actionLabel: 'Pay with PayPal',
+    helperLabel: 'Scan the QR, send payment, then submit your reference details.',
+    steps: [
+      'Open PayPal and choose Send & Request.',
+      'Scan the QR code and confirm the receiver details.',
+      'Send the full amount, then copy your transaction or reference ID.',
+    ],
+  },
+  venmo: {
+    label: 'Venmo',
+    subtitle: 'Mobile-first payment with proof submission',
+    description: 'Great for phone users who want to pay inside Venmo and immediately submit the proof details from the same flow.',
+    icon: Smartphone,
+    mode: 'proof',
+    qrSrc: '/Venmo.png',
+    gradientClass: 'from-[#008cff] via-[#22b8ff] to-[#3ddbd9]',
+    iconClass: 'bg-[#008cff] text-white',
+    badgeClass: 'border-[#008cff]/20 bg-[#008cff]/10 text-[#008cff]',
+    buttonClass: 'bg-[#008cff] text-white hover:bg-[#0070d1]',
+    actionLabel: 'Pay with Venmo',
+    helperLabel: 'Use the app to scan and submit your proof after payment.',
+    steps: [
+      'Open the Venmo app and tap the QR icon.',
+      'Switch to Scan and point your camera at the code.',
+      'Send the payment, then paste your reference ID and account name.',
+    ],
+  },
+  apple: {
+    label: 'Apple Pay',
+    subtitle: 'Ask the owner to send direct payment instructions',
+    description: 'Use this if you want a direct Apple Pay setup instead of a static QR payment flow.',
+    icon: Lock,
+    mode: 'contact',
+    gradientClass: 'from-slate-900 via-slate-700 to-slate-500',
+    iconClass: 'bg-slate-900 text-white',
+    badgeClass: 'border-slate-900/20 bg-slate-900/10 text-slate-700',
+    buttonClass: 'bg-slate-900 text-white hover:bg-slate-800',
+    actionLabel: 'Request Apple Pay',
+    helperLabel: 'We will review your request and send the next steps.',
+    steps: [
+      'Choose Apple Pay if you prefer a direct setup.',
+      'Submit your best contact details.',
+      'The owner will follow up with payment instructions.',
+    ],
+  },
+  zelle: {
+    label: 'Zelle',
+    subtitle: 'Request direct transfer details',
+    description: 'Pick this when you want a bank-to-bank transfer and need the owner to provide the transfer destination first.',
+    icon: Landmark,
+    mode: 'contact',
+    gradientClass: 'from-[#6d1ed4] via-[#8c3cf4] to-[#a855f7]',
+    iconClass: 'bg-[#6d1ed4] text-white',
+    badgeClass: 'border-[#6d1ed4]/20 bg-[#6d1ed4]/10 text-[#6d1ed4]',
+    buttonClass: 'bg-[#6d1ed4] text-white hover:bg-[#5d17b7]',
+    actionLabel: 'Request Zelle Details',
+    helperLabel: 'We will follow up with the exact transfer details.',
+    steps: [
+      'Choose Zelle for a direct transfer option.',
+      'Submit the best email and phone number to reach you.',
+      'The owner will send the Zelle details to complete payment.',
+    ],
+  },
+};
+
+const trustCards = [
+  {
+    icon: ShieldCheck,
+    title: 'Protected Submission',
+    copy: 'reCAPTCHA protects the payment proof and contact forms before anything reaches the owner.',
+  },
+  {
+    icon: Receipt,
+    title: 'Order Linked',
+    copy: 'Your payment details stay attached to the order number created during checkout.',
+  },
+  {
+    icon: QrCode,
+    title: 'Manual Review',
+    copy: 'QR payments are reviewed before any order is marked paid or completed.',
+  },
+];
+
+const bottomCards = [
+  {
+    icon: Lock,
+    title: 'Protected forms',
+    copy: 'Every payment submission is gated by reCAPTCHA before it reaches the owner.',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Manual verification',
+    copy: 'Payment proof is reviewed before the order is marked complete.',
+  },
+  {
+    icon: Receipt,
+    title: 'Order-first flow',
+    copy: 'The page stays tied to the same order total and number from checkout.',
+  },
+];
+
 const Payment = () => {
   const location = useLocation();
   const { toast } = useToast();
   const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
   const [orderData, setOrderData] = useState<OrderData | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentMethod, setCurrentMethod] = useState<any>(null);
+  const [activeProofMethod, setActiveProofMethod] = useState<MethodKey | null>(null);
+  const [activeContactMethod, setActiveContactMethod] = useState<MethodKey | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
   const [isSubmittingProof, setIsSubmittingProof] = useState(false);
-  const [paymentProof, setPaymentProof] = useState<PaymentProof>({
-    referenceId: '',
-    accountName: '',
-  });
-  
-  const [isContactFormOpen, setIsContactFormOpen] = useState(false);
-  const [contactMethod, setContactMethod] = useState<any>(null);
+  const [paymentProof, setPaymentProof] = useState<PaymentProof>({ referenceId: '', accountName: '' });
   const [contactData, setContactData] = useState({ name: '', email: '', phone: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contactFormSuccess, setContactFormSuccess] = useState(false);
@@ -66,768 +212,919 @@ const Payment = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const orderParam = params.get('order');
-    
-    if (orderParam) {
-      try {
-        const data = JSON.parse(decodeURIComponent(orderParam));
-        setOrderData(data);
-      } catch (e) {
-        console.error('Error parsing order data:', e);
-      }
+    if (!orderParam) return;
+
+    try {
+      setOrderData(JSON.parse(decodeURIComponent(orderParam)));
+    } catch (error) {
+      console.error('Error parsing order data:', error);
     }
   }, [location]);
 
-  const resetPaymentProof = () => {
-    setPaymentProof({
-      referenceId: '',
-      accountName: '',
-    });
-  };
-
+  const resetPaymentProof = () => setPaymentProof({ referenceId: '', accountName: '' });
   const resetPaymentCaptcha = () => {
     setPaymentCaptchaToken(null);
     setPaymentCaptchaResetKey((current) => current + 1);
   };
-
   const resetContactCaptcha = () => {
     setContactCaptchaToken(null);
     setContactCaptchaResetKey((current) => current + 1);
   };
 
-  const methodData = {
-    paypal: {
-      label: 'PayPal',
-      color: '#003087',
-      bg: 'rgba(0,48,135,.08)',
-      title: 'Pay via PayPal',
-      desc: 'Open PayPal → Send & Request → Scan QR Code. Point at the code below.',
-      note: 'powered by PayPal',
-      qrType: 'image',
-      qrSrc: '/paypal.jpeg'
-    },
-    venmo: {
-      label: 'Venmo',
-      color: '#008cff',
-      bg: 'rgba(0,140,255,.08)',
-      title: 'Pay via Venmo',
-      desc: 'Open Venmo → Tap the QR icon → Switch to Scan → Point at the code below.',
-      note: 'powered by Venmo',
-      qrType: 'image',
-      qrSrc: '/Venmo.png'
-    },
-    apple: {
-      label: 'Apple Pay',
-      color: '#1c1c1e',
-      bg: 'rgba(28,28,30,.08)',
-      title: 'Pay via Apple Pay',
-      desc: 'Contact us for Apple Pay payment link or setup instructions.',
-      note: 'powered by Apple Pay',
-      qrType: 'contact'
-    },
-    zelle: {
-      label: 'Zelle',
-      color: '#6d1ed4',
-      bg: 'rgba(109,30,212,.08)',
-      title: 'Pay via Zelle',
-      desc: 'Contact us for Zelle payment details.',
-      note: 'powered by Zelle',
-      qrType: 'contact'
-    }
-  };
-
-  const openModal = (method: string) => {
-    setCurrentMethod(methodData[method as keyof typeof methodData]);
+  const openProofDialog = (method: MethodKey) => {
     resetPaymentProof();
     resetPaymentCaptcha();
-    setIsModalOpen(true);
+    setActiveProofMethod(method);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closeProofDialog = () => {
+    setActiveProofMethod(null);
     resetPaymentProof();
     resetPaymentCaptcha();
   };
 
-  const closeContactForm = () => {
-    setIsContactFormOpen(false);
-    resetContactCaptcha();
-  };
-
-  const confirmPayment = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const trimmedReferenceId = paymentProof.referenceId.trim();
-    const trimmedAccountName = paymentProof.accountName.trim();
-
-    if (!trimmedReferenceId || !trimmedAccountName) {
-      toast({
-        title: "Missing payment details",
-        description: "Please enter your reference ID and the name used on PayPal or Venmo.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!recaptchaSiteKey || !paymentCaptchaToken) {
-      toast({
-        title: "Complete the security check",
-        description: "Please complete the reCAPTCHA before submitting your payment details.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmittingProof(true);
-
-    try {
-      console.log('Sending order email...', orderData);
-      const { data, error } = await supabase.functions.invoke('send-order-email', {
-        body: {
-          orderData: orderData,
-          paymentMethod: currentMethod?.label || 'Unknown',
-          paymentProof: {
-            referenceId: trimmedReferenceId,
-            accountName: trimmedAccountName,
-          },
-          recaptchaToken: paymentCaptchaToken,
-        }
-      });
-      
-      if (error) {
-        console.error('Supabase function error:', error);
-        alert('Email failed to send: ' + error.message);
-        return;
-      }
-      
-      console.log('Email sent successfully:', data);
-
-      // Update order status to complete
-      if (orderData.orderNumber) {
-        await (supabase.from('orders') as any)
-          .update({ 
-            status: 'payment_submitted',
-            payment_method: currentMethod?.label || 'Unknown',
-            payment_reference_id: trimmedReferenceId,
-            payer_account_name: trimmedAccountName,
-            payment_submitted_at: new Date().toISOString(),
-          })
-          .eq('order_number', orderData.orderNumber);
-      }
-    } catch (err) {
-      console.error('Error sending email:', err);
-      alert('Error: ' + err);
-      return;
-    } finally {
-      setIsSubmittingProof(false);
-      resetPaymentCaptcha();
-    }
-
-    closeModal();
-    setShowThankYou(true);
-    localStorage.removeItem('gxz-cart');
-    
-    toast({
-      title: "Payment Submitted",
-      description: "Your payment details were sent. We'll verify them shortly."
-    });
-  };
-
-  const openContactForm = (method: string) => {
-    setContactMethod(methodData[method as keyof typeof methodData]);
+  const openContactDialog = (method: MethodKey) => {
     resetContactCaptcha();
     if (orderData?.customer) {
       setContactData({
         name: orderData.customer.name || '',
         email: orderData.customer.email || '',
-        phone: orderData.customer.phone || ''
+        phone: orderData.customer.phone || '',
       });
     }
-    setIsContactFormOpen(true);
+    setActiveContactMethod(method);
   };
 
-  const submitContactForm = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const closeContactDialog = () => {
+    setActiveContactMethod(null);
+    resetContactCaptcha();
+  };
 
-    if (!recaptchaSiteKey || !contactCaptchaToken) {
+  const confirmPayment = async () => {
+    if (!orderData || !activeProofMethod) {
+      return;
+    }
+
+    if (!paymentProof.referenceId.trim() || !paymentProof.accountName.trim()) {
       toast({
-        title: "Complete the security check",
-        description: "Please complete the reCAPTCHA before sending your payment request.",
-        variant: "destructive",
+        title: 'Missing payment proof',
+        description: 'Please enter both the reference ID and the account name used for payment.',
+        variant: 'destructive',
       });
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const updatedOrderData = {
-        ...orderData!,
-        customer: { ...orderData?.customer, ...contactData } // Ensure contact info is defined securely
-      } as OrderData;
-
-      const { data, error } = await supabase.functions.invoke('send-order-email', {
-        body: {
-          orderData: updatedOrderData,
-          paymentMethod: contactMethod?.label || 'Unknown',
-          recaptchaToken: contactCaptchaToken,
-        }
+    if (!paymentCaptchaToken) {
+      toast({
+        title: 'Security check required',
+        description: 'Please complete the reCAPTCHA before submitting your payment proof.',
+        variant: 'destructive',
       });
-      
-      if (error) {
-        console.error('Supabase function error:', error);
-        alert('Email failed to send: ' + error.message);
-        setIsSubmitting(false);
-        return;
+      return;
+    }
+
+    const method = methodData[activeProofMethod];
+
+    try {
+      setIsSubmittingProof(true);
+
+      const paymentMethod = method.label;
+      const { error: emailError } = await supabase.functions.invoke('send-order-email', {
+        body: {
+          orderData,
+          paymentMethod,
+          paymentProof,
+          recaptchaToken: paymentCaptchaToken,
+        },
+      });
+
+      if (emailError) {
+        throw emailError;
       }
 
-      if (orderData?.orderNumber) {
-        // Also update the order status
-        await (supabase.from('orders') as any)
-          .update({ 
-            status: 'payment_contact_requested',
-            payment_method: contactMethod?.label || 'Unknown',
-            customer_name: contactData.name,
-            customer_email: contactData.email,
-            customer_phone: contactData.phone
+      if (orderData.orderNumber) {
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({
+            payment_method: paymentMethod,
+            payment_reference_id: paymentProof.referenceId.trim(),
+            payer_account_name: paymentProof.accountName.trim(),
+            payment_submitted_at: new Date().toISOString(),
+            status: 'payment_submitted',
           })
           .eq('order_number', orderData.orderNumber);
+
+        if (updateError) {
+          throw updateError;
+        }
       }
-      
-      setIsSubmitting(false);
-      closeContactForm();
-      setShowThankYou(true);
-      setContactFormSuccess(true);
+
       localStorage.removeItem('gxz-cart');
-    } catch (err) {
-      console.error('Error sending email:', err);
-      alert('Error: ' + err);
-      setIsSubmitting(false);
+      setContactFormSuccess(false);
+      closeProofDialog();
+      setShowThankYou(true);
+      toast({
+        title: 'Payment proof submitted',
+        description: 'The owner received your payment details and will review them shortly.',
+      });
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      const message = error instanceof Error ? error.message : 'Something went wrong while sending your proof.';
+      toast({
+        title: 'Unable to submit payment proof',
+        description: message,
+        variant: 'destructive',
+      });
+      resetPaymentCaptcha();
     } finally {
-      resetContactCaptcha();
+      setIsSubmittingProof(false);
     }
+  };
+
+  const submitContactForm = async () => {
+    if (!orderData || !activeContactMethod) {
+      return;
+    }
+
+    if (!contactData.name.trim() || !contactData.email.trim() || !contactData.phone.trim()) {
+      toast({
+        title: 'Missing contact details',
+        description: 'Please fill in your name, email, and phone number first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!contactCaptchaToken) {
+      toast({
+        title: 'Security check required',
+        description: 'Please complete the reCAPTCHA before requesting payment details.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const method = methodData[activeContactMethod];
+    const contactOrderData: OrderData = {
+      ...orderData,
+      customer: {
+        name: contactData.name.trim(),
+        email: contactData.email.trim(),
+        phone: contactData.phone.trim(),
+        address: orderData.customer?.address ?? '',
+        city: orderData.customer?.city,
+        state: orderData.customer?.state,
+        zipCode: orderData.customer?.zipCode,
+      },
+    };
+
+    try {
+      setIsSubmitting(true);
+
+      const { error: emailError } = await supabase.functions.invoke('send-order-email', {
+        body: {
+          orderData: contactOrderData,
+          paymentMethod: method.label,
+          recaptchaToken: contactCaptchaToken,
+        },
+      });
+
+      if (emailError) {
+        throw emailError;
+      }
+
+      if (orderData.orderNumber) {
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({
+            payment_method: method.label,
+            customer_name: contactOrderData.customer?.name ?? null,
+            customer_email: contactOrderData.customer?.email ?? null,
+            customer_phone: contactOrderData.customer?.phone ?? null,
+            status: 'payment_contact_requested',
+          })
+          .eq('order_number', orderData.orderNumber);
+
+        if (updateError) {
+          throw updateError;
+        }
+      }
+
+      localStorage.removeItem('gxz-cart');
+      setOrderData(contactOrderData);
+      setContactFormSuccess(true);
+      closeContactDialog();
+      setShowThankYou(true);
+      toast({
+        title: `${method.label} request sent`,
+        description: 'The owner received your request and will contact you with the next steps.',
+      });
+    } catch (error) {
+      console.error('Error requesting payment details:', error);
+      const message = error instanceof Error ? error.message : 'Something went wrong while sending your request.';
+      toast({
+        title: 'Unable to send request',
+        description: message,
+        variant: 'destructive',
+      });
+      resetContactCaptcha();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const paymentMethods = Object.entries(methodData) as [MethodKey, PaymentMethod][];
+  const proofMethod = activeProofMethod ? methodData[activeProofMethod] : null;
+  const contactMethod = activeContactMethod ? methodData[activeContactMethod] : null;
+  const payNowMethods = paymentMethods.filter(([, method]) => method.mode === 'proof');
+  const requestMethods = paymentMethods.filter(([, method]) => method.mode === 'contact');
+  const subtotal = typeof orderData?.subtotal === 'number'
+    ? orderData.subtotal
+    : orderData?.items.reduce((sum, item) => sum + item.total, 0) ?? 0;
+  const shippingCost = typeof orderData?.shippingCost === 'number'
+    ? orderData.shippingCost
+    : Math.max((orderData?.totalPrice ?? 0) - subtotal, 0);
+  const customerLocation = [orderData?.customer?.city, orderData?.customer?.state, orderData?.customer?.zipCode]
+    .filter(Boolean)
+    .join(', ');
+
+  const renderMethodCard = ([key, method]: [MethodKey, PaymentMethod]) => {
+    const Icon = method.icon;
+    const badgeLabel = method.mode === 'proof' ? 'QR payment' : 'Owner follow-up';
+
+    return (
+      <Card
+        key={key}
+        className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border-border/70 bg-card/95 shadow-[0_32px_90px_-60px_rgba(15,23,42,0.5)] transition-transform duration-300 hover:-translate-y-1"
+      >
+        <div className={cn('absolute inset-x-0 top-0 h-28 bg-gradient-to-r opacity-10', method.gradientClass)} />
+
+        <CardHeader className="relative space-y-5 p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-4">
+              <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-4 ring-white/65 shadow-sm', method.iconClass)}>
+                <Icon className="h-6 w-6" />
+              </div>
+              <div className="space-y-1.5">
+                <CardTitle className="text-2xl text-foreground">{method.label}</CardTitle>
+                <CardDescription className="text-sm leading-6 text-muted-foreground">
+                  {method.subtitle}
+                </CardDescription>
+              </div>
+            </div>
+
+            <Badge className={cn('w-fit rounded-full border px-3 py-1 text-xs font-semibold', method.badgeClass)}>
+              {badgeLabel}
+            </Badge>
+          </div>
+
+          <div className="rounded-[24px] border border-border/70 bg-background/85 p-4 backdrop-blur">
+            <p className="text-sm leading-6 text-muted-foreground">{method.description}</p>
+          </div>
+        </CardHeader>
+
+        <CardContent className="relative flex flex-1 flex-col gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
+          <div className="rounded-[24px] border border-border/70 bg-muted/40 p-4 sm:p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <ScanLine className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">How this works</p>
+            </div>
+            <div className="space-y-3">
+              {method.steps.map((step, index) => (
+                <div key={step} className="flex items-start gap-3">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background text-sm font-semibold text-foreground shadow-sm">
+                    {index + 1}
+                  </div>
+                  <p className="text-sm leading-6 text-muted-foreground">{step}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-auto flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <p className="max-w-sm text-sm leading-6 text-muted-foreground">{method.helperLabel}</p>
+            <Button
+              className={cn('h-12 w-full rounded-full px-6 text-sm font-semibold shadow-lg shadow-black/5 lg:w-auto', method.buttonClass)}
+              onClick={() => (method.mode === 'proof' ? openProofDialog(key) : openContactDialog(key))}
+            >
+              {method.actionLabel}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (!orderData) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h2>No Order Found</h2>
-          <p>Please add items to your cart first.</p>
-          <Link to="/products" style={{ color: '#2563eb' }}>Browse Products</Link>
-        </div>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-32 pb-20">
+          <div className="container mx-auto px-6">
+            <div className="mx-auto max-w-2xl">
+              <Card className="overflow-hidden rounded-[28px] border-border/70 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.45)]">
+                <CardHeader className="space-y-4 bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-8 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <Receipt className="h-7 w-7" />
+                  </div>
+                  <div className="space-y-2">
+                    <CardTitle className="font-display text-3xl text-foreground">Payment details unavailable</CardTitle>
+                    <CardDescription className="text-base text-muted-foreground">
+                      We could not find your order information for this payment page. Head back to checkout and generate a fresh payment link.
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 p-8">
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    This usually happens when the payment page is opened directly instead of from checkout, or if the order link expired.
+                  </p>
+                  <Button asChild className="h-12 rounded-full px-6">
+                    <Link to="/checkout">
+                      Return to Checkout
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
-  const subtotal = orderData.subtotal ?? orderData.items.reduce((sum, item) => sum + item.total, 0);
-  const shippingCost = orderData.shippingCost ?? Math.max(orderData.totalPrice - subtotal, 0);
-
   return (
-    <div>
-      <header>
-        <div className="header-inner">
-          <Link to="/" className="logo">
-            <div className="logo-icon">
-              <img src="/GXZ-Health.png" alt="GXZ Logo" />
-            </div>
-            <span className="logo-text">GXZ<span>HEALTH</span></span>
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      <Navbar />
 
-      <section className="hero">
-        <div className="hero-bg">
-          <div className="hero-orb hero-orb-1"></div>
-          <div className="hero-orb hero-orb-2"></div>
-        </div>
+      <main className="overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-20">
+        <section className="relative">
+          <div className="absolute inset-x-0 top-0 -z-10 h-[38rem] bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_50%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_42%),linear-gradient(180deg,_rgba(248,250,252,0.92),_rgba(248,250,252,0))]" />
+          <div className="container mx-auto px-4 sm:px-6">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem] xl:gap-10"
+            >
+              <div className="space-y-8">
+                <motion.div variants={fadeInUp}>
+                  <div className="overflow-hidden rounded-[32px] border border-border/70 bg-card/85 shadow-[0_34px_110px_-70px_rgba(15,23,42,0.52)] backdrop-blur">
+                    <div className="grid gap-8 p-5 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,1fr)_21rem]">
+                      <div className="space-y-6">
+                        <Link
+                          to="/checkout"
+                          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                          Back to checkout
+                        </Link>
 
-        <div className="hero-badge">Payment Guide</div>
-        <h1>Complete Your<br/><em>Payment</em></h1>
-        {orderData?.customer && (
-          <p style={{ fontSize: '1.1rem', fontWeight: '600', color: 'hsl(var(--secondary))', marginTop: '16px' }}>
-            Welcome, {orderData.customer.name}!
-          </p>
-        )}
-        <p>Choose your preferred payment method below. Scan the QR code and complete your order.</p>
+                        <div className="space-y-5">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Badge className="rounded-full border-primary/15 bg-primary/10 px-4 py-1.5 text-primary">
+                              Secure payment setup
+                            </Badge>
+                            <Badge variant="outline" className="rounded-full px-4 py-1.5 text-muted-foreground">
+                              Order #{orderData.orderNumber ?? 'Pending'}
+                            </Badge>
+                          </div>
 
-        <div className="hero-methods">
-          <div className="method-pill"><span className="method-pill-dot" style={{background:'#009cde'}}></span>PayPal</div>
-          <div className="method-pill"><span className="method-pill-dot" style={{background:'#008cff'}}></span>Venmo</div>
-          <div className="method-pill"><span className="method-pill-dot" style={{background:'#48484a'}}></span>Apple Pay</div>
-          <div className="method-pill"><span className="method-pill-dot" style={{background:'#6d1ed4'}}></span>Zelle</div>
-        </div>
-      </section>
+                          <div className="max-w-3xl space-y-4">
+                            <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+                              Finish checkout with the payment flow that feels easiest for your customer.
+                            </h1>
+                            <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base md:text-lg">
+                              The order total, shipping details, and customer information from checkout are already carried into this page. Use QR payments for fast proof submission, or request Apple Pay and Zelle instructions for a direct owner follow-up.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
 
-      {/* Order Summary */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px' }}>
-        <div className="order-summary" style={{ background: 'white', borderRadius: '32px', padding: '36px', marginBottom: '40px', boxShadow: '0 2px 8px rgba(37,99,235,.08)', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.5rem', fontWeight: '800', marginBottom: '24px', color: '#0a1628' }}>Order Summary</h3>
-          
-          <div style={{ marginBottom: '24px' }}>
-            {orderData.items.map((item, index) => (
-              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #e2e8f0' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>{item.name}</div>
-                  <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>${item.price.toFixed(2)} × {item.quantity}</div>
-                </div>
-                <div style={{ fontWeight: '600', color: '#1e293b' }}>${item.total.toFixed(2)}</div>
+                      <div className="relative overflow-hidden rounded-[28px] bg-slate-950 p-5 text-white shadow-[0_28px_80px_-50px_rgba(15,23,42,0.85)] sm:p-6">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.28),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(34,197,94,0.18),_transparent_38%)]" />
+                        <div className="relative space-y-5">
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Checkout snapshot</p>
+                            <p className="text-sm leading-6 text-slate-300">
+                              A quick view of what this payment page is tied to before the customer submits anything.
+                            </p>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                            <div className="rounded-[22px] border border-white/10 bg-white/10 p-4 backdrop-blur">
+                              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">Total due</p>
+                              <p className="mt-2 text-3xl font-bold">${orderData.totalPrice.toFixed(2)}</p>
+                            </div>
+                            <div className="rounded-[22px] border border-white/10 bg-white/10 p-4 backdrop-blur">
+                              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">Customer</p>
+                              <p className="mt-2 text-base font-semibold">{orderData.customer?.name || 'Pending details'}</p>
+                              {orderData.customer?.email && <p className="mt-1 text-sm text-slate-300">{orderData.customer.email}</p>}
+                            </div>
+                          </div>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">Pay now</p>
+                              <p className="mt-2 text-lg font-semibold">{payNowMethods.length} QR options</p>
+                            </div>
+                            <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">Owner follow-up</p>
+                              <p className="mt-2 text-lg font-semibold">{requestMethods.length} direct options</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div variants={fadeInUp} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {trustCards.map((card) => {
+                    const Icon = card.icon;
+
+                    return (
+                      <Card
+                        key={card.title}
+                        className="rounded-[24px] border-border/70 bg-card/90 shadow-[0_24px_70px_-54px_rgba(15,23,42,0.5)] backdrop-blur"
+                      >
+                        <CardContent className="space-y-4 p-6">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <Icon className="h-6 w-6" />
+                          </div>
+                          <div className="space-y-2">
+                            <h2 className="text-base font-semibold text-foreground">{card.title}</h2>
+                            <p className="text-sm leading-6 text-muted-foreground">{card.copy}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </motion.div>
+
+                <motion.div variants={fadeInUp} className="space-y-8">
+                  <section className="space-y-4">
+                    <div className="flex flex-col gap-4 rounded-[28px] border border-border/70 bg-card/75 p-5 shadow-[0_24px_80px_-60px_rgba(15,23,42,0.45)] sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+                      <div className="space-y-2">
+                        <Badge className="rounded-full border-primary/15 bg-primary/10 px-4 py-1.5 text-primary">Pay now</Badge>
+                        <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Instant QR payment options</h2>
+                        <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                          Use these when the customer is ready to pay immediately and can provide proof after the transfer.
+                        </p>
+                      </div>
+                      <div className="rounded-[22px] border border-border/70 bg-background/80 px-4 py-3 text-sm text-muted-foreground">
+                        {payNowMethods.length} payment methods ready for immediate checkout
+                      </div>
+                    </div>
+
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      {payNowMethods.map(renderMethodCard)}
+                    </div>
+                  </section>
+
+                  <section className="space-y-4">
+                    <div className="flex flex-col gap-4 rounded-[28px] border border-border/70 bg-card/75 p-5 shadow-[0_24px_80px_-60px_rgba(15,23,42,0.45)] sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+                      <div className="space-y-2">
+                        <Badge variant="outline" className="rounded-full px-4 py-1.5 text-muted-foreground">Owner follow-up</Badge>
+                        <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Request direct payment instructions</h2>
+                        <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                          Use these when the customer prefers Apple Pay or Zelle and needs the owner to send the exact payment destination first.
+                        </p>
+                      </div>
+                      <div className="rounded-[22px] border border-border/70 bg-background/80 px-4 py-3 text-sm text-muted-foreground">
+                        The owner receives the request with the order details and follows up manually
+                      </div>
+                    </div>
+
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      {requestMethods.map(renderMethodCard)}
+                    </div>
+                  </section>
+                </motion.div>
+
+                <motion.div variants={fadeInUp}>
+                  <Card className="overflow-hidden rounded-[28px] border-border/70 shadow-[0_28px_90px_-62px_rgba(15,23,42,0.55)]">
+                    <CardContent className="grid gap-0 p-0 md:grid-cols-[1.1fr_0.9fr]">
+                      <div className="space-y-4 p-6 sm:p-8">
+                        <Badge className="rounded-full border-primary/15 bg-primary/10 px-4 py-1.5 text-primary">
+                          Review before completion
+                        </Badge>
+                        <div className="space-y-3">
+                          <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
+                            Orders are only marked paid after the owner checks the payment details.
+                          </h2>
+                          <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                            QR-based payments should include your order number in the transfer note whenever possible. The payment proof form helps the
+                            owner match your order, but it does not auto-complete the order by itself.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-border/70 bg-muted/40 p-6 sm:p-8 md:border-t-0 md:border-l">
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">Good to include</h3>
+                          <div className="space-y-3">
+                            {['Your order number in the payment note', 'The exact reference or transaction ID', 'The account name used for payment'].map((item) => (
+                              <div key={item} className="flex items-start gap-3">
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+                                <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div variants={fadeInUp} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {bottomCards.map((card) => {
+                    const Icon = card.icon;
+
+                    return (
+                      <Card key={card.title} className="rounded-[24px] border-border/70 bg-card/90">
+                        <CardContent className="space-y-4 p-6">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-foreground">{card.title}</h3>
+                            <p className="text-sm leading-6 text-muted-foreground">{card.copy}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </motion.div>
               </div>
-            ))}
+
+              <motion.aside variants={fadeInUp} className="space-y-5 xl:sticky xl:top-32 xl:self-start">
+                <Card className="overflow-hidden rounded-[30px] border-border/70 shadow-[0_34px_90px_-65px_rgba(15,23,42,0.55)]">
+                  <CardHeader className="space-y-5 bg-gradient-to-br from-card via-card to-primary/5 p-5 sm:p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-2">
+                        <CardDescription className="text-sm uppercase tracking-[0.26em] text-muted-foreground">Order summary</CardDescription>
+                        <CardTitle className="font-display text-3xl text-foreground">${orderData.totalPrice.toFixed(2)}</CardTitle>
+                      </div>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                        <Receipt className="h-6 w-6" />
+                      </div>
+                    </div>
+
+                    <div className="rounded-[24px] border border-border/70 bg-background/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Order number</p>
+                      <p className="mt-2 text-lg font-semibold text-foreground">{orderData.orderNumber ?? 'Pending assignment'}</p>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-6 p-5 sm:p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Items</span>
+                        <span className="font-medium text-foreground">{orderData.totalItems}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="font-medium text-foreground">${subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Shipping</span>
+                        <span className="font-medium text-foreground">${shippingCost.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-dashed border-border pt-4">
+                        <span className="text-sm font-semibold text-foreground">Total due</span>
+                        <span className="text-xl font-bold text-primary">${orderData.totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 rounded-[24px] border border-border/70 bg-muted/40 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Deliver to</p>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-foreground">{orderData.customer?.name || 'Customer details pending'}</p>
+                        {orderData.customer?.email && <p className="text-sm text-muted-foreground">{orderData.customer.email}</p>}
+                        {orderData.customer?.phone && <p className="text-sm text-muted-foreground">{orderData.customer.phone}</p>}
+                        {orderData.customer?.address && <p className="text-sm text-muted-foreground">{orderData.customer.address}</p>}
+                        {customerLocation && <p className="text-sm text-muted-foreground">{customerLocation}</p>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Items in this order</p>
+                      <div className="max-h-[19rem] space-y-3 overflow-y-auto pr-1">
+                        {orderData.items.map((item, index) => (
+                          <div key={`${item.name}-${index}`} className="flex items-start justify-between gap-4 rounded-[20px] border border-border/60 bg-background/80 px-4 py-3">
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-foreground">{item.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {item.quantity} x ${item.price.toFixed(2)}
+                              </p>
+                            </div>
+                            <p className="text-sm font-semibold text-foreground">${item.total.toFixed(2)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-[28px] border-border/70 bg-card/90">
+                  <CardContent className="space-y-4 p-5 sm:p-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <ShieldCheck className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <h2 className="text-lg font-semibold text-foreground">What happens next</h2>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Submit proof for PayPal or Venmo, or request owner instructions for Apple Pay or Zelle. In every case, the owner reviews the order before moving it forward.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.aside>
+            </motion.div>
           </div>
-
-          <div style={{ display: 'grid', gap: '12px', paddingTop: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '0.95rem' }}>
-              <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '0.95rem' }}>
-              <span>Shipping</span>
-              <span>${shippingCost.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '24px', borderTop: '2px solid #1e293b', marginTop: '16px' }}>
-            <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0a1628' }}>Total Amount</div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '2rem', fontWeight: '800', color: '#2563eb' }}>
-              ${orderData.totalPrice.toFixed(2)}
-            </div>
-          </div>
-          
-          <div style={{ background: '#eff6ff', padding: '16px', borderRadius: '12px', marginTop: '24px', borderLeft: '4px solid #2563eb' }}>
-            <div style={{ fontWeight: '600', color: '#0a1628', marginBottom: '8px' }}>📦 Total Items: {orderData.totalItems}</div>
-            <div style={{ fontSize: '0.875rem', color: '#475569' }}>Please scan the QR code below and send exactly <strong>${orderData.totalPrice.toFixed(2)}</strong></div>
-          </div>
-        </div>
-      </div>
-
-      <main>
-        <div className="section-label">Choose a Method</div>
-        <h2 className="section-title">Select How You'd Like to Pay</h2>
-
-        <div className="cards-grid">
-          <div className="card card-paypal fade-in visible">
-            <div className="card-header">
-              <div className="card-logo-wrap logo-paypal">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-                  <path d="M19.5 7.5c.4 1.3.3 3.3-1.1 4.8C17 13.8 15.3 14.5 13 14.5H11l-1.5 6H7l3-12h5.5c1.8 0 3.2.4 4 2zm-7 4.5h1.5c1.2 0 2-.3 2.4-.8.4-.5.5-1.2.2-2C16.3 8.7 15.6 8.5 14.5 8.5H12.5L11.5 12z"/>
-                </svg>
-              </div>
-              <div>
-                <div className="card-title">PayPal</div>
-                <div className="card-subtitle">Safe & Instant Transfers</div>
-              </div>
-            </div>
-
-            <p className="card-desc">
-              PayPal is one of the world's most trusted online payment platforms. Use the app or website to send money instantly using my unique QR code.
-            </p>
-
-            <div className="steps-label">How It Works</div>
-            <ul className="steps">
-              <li className="step">
-                <span className="step-num">1</span>
-                <span className="step-text">Open the <strong>PayPal app</strong> or visit <strong>paypal.com</strong> and log in.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">2</span>
-                <span className="step-text">Tap <strong>"Send & Request"</strong> then select <strong>"Send"</strong>.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">3</span>
-                <span className="step-text">Tap the <strong>QR code icon</strong> to open the scanner.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">4</span>
-                <span className="step-text">Scan <strong>my QR code</strong> below, enter <strong>${orderData.totalPrice.toFixed(2)}</strong> & hit <strong>Send</strong>.</span>
-              </li>
-            </ul>
-
-            <button className="btn-cta btn-paypal" onClick={() => openModal('paypal')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-              </svg>
-              Pay ${orderData.totalPrice.toFixed(2)} with PayPal
-            </button>
-          </div>
-
-          <div className="card card-venmo fade-in visible">
-            <div className="card-header">
-              <div className="card-logo-wrap logo-venmo">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
-                  <path d="M19 4c.6 1 .8 2 .8 3.3 0 4.1-3.5 9.5-6.3 13.3H7.2L4.5 5.2l5-.5 1.4 11.3c1.3-2.2 2.9-5.6 2.9-7.9 0-1.3-.2-2.1-.5-2.8L19 4z"/>
-                </svg>
-              </div>
-              <div>
-                <div className="card-title">Venmo</div>
-                <div className="card-subtitle">Social Payments Made Easy</div>
-              </div>
-            </div>
-
-            <p className="card-desc">
-              Venmo makes paying friends and businesses incredibly easy. Scan my QR code directly from the Venmo app — it takes less than 30 seconds.
-            </p>
-
-            <div className="steps-label">How It Works</div>
-            <ul className="steps">
-              <li className="step">
-                <span className="step-num">1</span>
-                <span className="step-text">Open the <strong>Venmo app</strong> on your phone and log in.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">2</span>
-                <span className="step-text">Tap the <strong>QR code icon</strong> at the top of the screen.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">3</span>
-                <span className="step-text">Switch to <strong>"Scan"</strong> mode and point your camera at my QR code.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">4</span>
-                <span className="step-text">Enter <strong>${orderData.totalPrice.toFixed(2)}</strong>, add an optional <strong>note</strong>, and tap <strong>Pay</strong>.</span>
-              </li>
-            </ul>
-
-            <button className="btn-cta btn-venmo" onClick={() => openModal('venmo')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-              </svg>
-              Pay ${orderData.totalPrice.toFixed(2)} with Venmo
-            </button>
-          </div>
-
-          <div className="card card-apple fade-in visible">
-            <div className="card-header">
-              <div className="card-logo-wrap logo-apple">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                  <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.42c1.29.07 2.17.7 2.96.72.96-.2 1.88-.84 3.0-.9 1.54.12 2.71.68 3.48 1.83C15.03 10.67 15.53 14.78 17.05 20.28zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-              </div>
-              <div>
-                <div className="card-title">Apple Pay <span style={{fontSize:'.7em',color:'var(--blue-500)',fontWeight:'600',background:'var(--blue-50)',padding:'3px 8px',borderRadius:'6px',marginLeft:'6px'}}>Optional</span></div>
-                <div className="card-subtitle">Available Upon Request</div>
-              </div>
-            </div>
-
-            <p className="card-desc">
-              Prefer to pay with Apple Pay? No problem! Contact us and we'll send you a personalized payment link or setup instructions.
-            </p>
-
-            <div className="steps-label">Why Contact Us?</div>
-            <ul className="steps">
-              <li className="step">
-                <span className="step-num">1</span>
-                <span className="step-text">Apple Pay requires <strong>direct contact setup</strong> or a payment link.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">2</span>
-                <span className="step-text">We'll send you a <strong>secure link</strong> or Apple Pay details directly.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">3</span>
-                <span className="step-text">Quick setup takes <strong>less than a minute</strong> — then you're good to go!</span>
-              </li>
-            </ul>
-
-            <button className="btn-cta btn-apple" onClick={() => openContactForm('apple')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-              </svg>
-              Contact Me for Apple Pay
-            </button>
-          </div>
-
-          <div className="card card-zelle fade-in visible">
-            <div className="card-header">
-              <div className="card-logo-wrap logo-zelle">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
-                  <path d="M5 5h14l-9 7h9v7H5l9-7H5V5z"/>
-                </svg>
-              </div>
-              <div>
-                <div className="card-title">Zelle <span style={{fontSize:'.7em',color:'var(--blue-500)',fontWeight:'600',background:'var(--blue-50)',padding:'3px 8px',borderRadius:'6px',marginLeft:'6px'}}>Optional</span></div>
-                <div className="card-subtitle">Available Upon Request</div>
-              </div>
-            </div>
-
-            <p className="card-desc">
-              Prefer Zelle for direct bank-to-bank transfers? Contact us and we'll share our Zelle details or send you a payment link.
-            </p>
-
-            <div className="steps-label">Why Contact Us?</div>
-            <ul className="steps">
-              <li className="step">
-                <span className="step-num">1</span>
-                <span className="step-text">Zelle typically requires <strong>email or phone number</strong> to send payments.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">2</span>
-                <span className="step-text">We'll provide our <strong>Zelle information</strong> or a direct payment link.</span>
-              </li>
-              <li className="step">
-                <span className="step-num">3</span>
-                <span className="step-text">Fast, free transfers arrive in <strong>minutes</strong> — no fees involved!</span>
-              </li>
-            </ul>
-
-            <button className="btn-cta btn-zelle" onClick={() => openContactForm('zelle')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-              </svg>
-              Contact Me for Zelle
-            </button>
-          </div>
-        </div>
+        </section>
       </main>
 
-      <div className="trust-bar">
-        <div className="trust-bar-inner">
-          <div className="trust-bar-title">Trusted & Secure Payments</div>
-          <div className="trust-bar-sub">Every method listed is end-to-end encrypted and verified by the platform.</div>
-          <div className="trust-items">
-            <div className="trust-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Bank-Level Security
-            </div>
-            <div className="trust-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Instant Transfers
-            </div>
-            <div className="trust-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              No Extra Fees
-            </div>
-            <div className="trust-item">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-              Mobile Friendly
-            </div>
-          </div>
-        </div>
-      </div>
+      <Footer />
 
-      <footer>
-        <div className="footer-inner">
-          <div className="footer-bottom">
-            <p>&copy; 2025 GXZHEALTH. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Modal */}
-      {isModalOpen && currentMethod && (
-        <div className={`modal-overlay ${isModalOpen ? 'active' : ''}`} onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeModal}>
-              <X size={16} />
-            </button>
-
-            <div className="modal-badge" style={{ color: currentMethod.color, background: currentMethod.bg, borderColor: currentMethod.color + '40' }}>
-              {currentMethod.label}
-            </div>
-            <div className="modal-title">{currentMethod.title}</div>
-            <p className="modal-desc">Amount to send: <strong style={{ fontSize: '1.5rem', color: '#2563eb' }}>${orderData.totalPrice.toFixed(2)}</strong></p>
-
-            <div className="qr-frame">
-              {currentMethod.qrType === 'image' ? (
-                <img src={currentMethod.qrSrc} alt="QR Code" style={{ width: '200px', height: '200px', borderRadius: '12px', objectFit: 'contain' }} />
-              ) : (
-                <div className="qr-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="3" y="3" width="7" height="7" rx="1"/>
-                    <rect x="14" y="3" width="7" height="7" rx="1"/>
-                    <rect x="3" y="14" width="7" height="7" rx="1"/>
-                    <path d="M14 14h3M14 17v3M17 14v3M21 17h-1M21 20h-4"/>
-                  </svg>
-                  Your QR Code Here
+      <Dialog open={Boolean(proofMethod)} onOpenChange={(open) => (!open ? closeProofDialog() : undefined)}>
+        <DialogContent className="max-h-[calc(100vh-1.5rem)] max-w-4xl overflow-hidden border-border/70 p-0 sm:max-h-[calc(100vh-2rem)]">
+          {proofMethod && (
+            <div className="grid max-h-[calc(100vh-1.5rem)] gap-0 lg:grid-cols-[0.95fr_1.05fr] sm:max-h-[calc(100vh-2rem)]">
+              <div className={cn('space-y-6 overflow-y-auto p-5 text-white sm:p-6 lg:p-8', `bg-gradient-to-br ${proofMethod.gradientClass}`)}>
+                <div className="space-y-3 pr-10 sm:pr-12">
+                  <Badge className="rounded-full border-white/20 bg-white/15 px-4 py-1.5 text-white hover:bg-white/15">
+                    QR payment
+                  </Badge>
+                  <DialogTitle className="font-display text-3xl">{proofMethod.label} payment</DialogTitle>
+                  <DialogDescription className="text-white/80">
+                    Scan the QR code, send the exact order total, then submit the required proof details below.
+                  </DialogDescription>
                 </div>
-              )}
-            </div>
 
-            <form onSubmit={confirmPayment} style={{ marginTop: '20px', textAlign: 'left' }}>
-              <div style={{ display: 'grid', gap: '14px' }}>
-                <div>
-                  <Label
-                    htmlFor="payment-reference-id"
-                    style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}
-                  >
-                    Reference ID / Transaction ID <span style={{ color: '#ef4444' }}>*</span>
-                  </Label>
-                  <Input
-                    id="payment-reference-id"
-                    value={paymentProof.referenceId}
-                    onChange={(e) => setPaymentProof((current) => ({ ...current, referenceId: e.target.value }))}
-                    placeholder="Please fill in your payment reference ID"
-                    required
+                <div className="rounded-[32px] bg-white/95 p-5 shadow-2xl shadow-black/10">
+                  <img
+                    src={proofMethod.qrSrc}
+                    alt={`${proofMethod.label} QR code`}
+                    className="mx-auto aspect-square w-full max-w-[16rem] rounded-[24px] object-cover sm:max-w-[20rem] lg:max-w-[22rem]"
                   />
                 </div>
 
-                <div>
-                  <Label
-                    htmlFor="payment-account-name"
-                    style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}
-                  >
-                    Name on PayPal / Venmo account <span style={{ color: '#ef4444' }}>*</span>
-                  </Label>
-                  <Input
-                    id="payment-account-name"
-                    value={paymentProof.accountName}
-                    onChange={(e) => setPaymentProof((current) => ({ ...current, accountName: e.target.value }))}
-                    placeholder="Enter the account name used for payment"
-                    required
-                  />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[24px] border border-white/20 bg-white/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Amount to send</p>
+                    <p className="mt-2 text-2xl font-bold">${orderData.totalPrice.toFixed(2)}</p>
+                  </div>
+                  <div className="rounded-[24px] border border-white/20 bg-white/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Order number</p>
+                    <p className="mt-2 text-lg font-semibold">{orderData.orderNumber ?? 'Pending assignment'}</p>
+                  </div>
                 </div>
               </div>
 
-              <div
-                style={{
-                  marginTop: '18px',
-                  padding: '14px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  background: '#f8fafc',
-                }}
-              >
-                <p style={{ margin: '0 0 12px', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' }}>
-                  Security Check
-                </p>
-                <RecaptchaWidget
-                  siteKey={recaptchaSiteKey}
-                  onVerify={setPaymentCaptchaToken}
-                  resetKey={paymentCaptchaResetKey}
-                />
+              <div className="flex min-h-0 flex-col bg-background">
+                <div className="flex-1 space-y-6 overflow-y-auto p-5 sm:p-6 lg:p-8">
+                  <DialogHeader className="space-y-3 pr-10 text-left sm:pr-12">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <ScanLine className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <DialogTitle className="text-2xl text-foreground">Submit payment proof</DialogTitle>
+                      <DialogDescription className="text-sm leading-6 text-muted-foreground">
+                        Both fields are required. The owner uses this information to match your transfer before marking the order as paid.
+                      </DialogDescription>
+                    </div>
+                  </DialogHeader>
+
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="referenceId">Reference ID / Transaction ID *</Label>
+                      <Input
+                        id="referenceId"
+                        className="h-12 rounded-2xl"
+                        placeholder="Please fill in your payment reference ID"
+                        value={paymentProof.referenceId}
+                        onChange={(event) => setPaymentProof((current) => ({ ...current, referenceId: event.target.value }))}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="accountName">Name on PayPal / Venmo account *</Label>
+                      <Input
+                        id="accountName"
+                        className="h-12 rounded-2xl"
+                        placeholder="Enter the account name used for payment"
+                        value={paymentProof.accountName}
+                        onChange={(event) => setPaymentProof((current) => ({ ...current, accountName: event.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-[28px] border border-border/70 bg-muted/35 p-4 sm:p-5">
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-foreground">Security check</p>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Complete the captcha to protect the payment form from spam submissions.
+                      </p>
+                    </div>
+                    <RecaptchaWidget
+                      siteKey={recaptchaSiteKey}
+                      onVerify={setPaymentCaptchaToken}
+                      resetKey={paymentCaptchaResetKey}
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-border/70 bg-background/95 px-5 py-4 backdrop-blur sm:px-6 lg:px-8">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <Button variant="outline" className="h-12 rounded-full px-6" onClick={closeProofDialog}>
+                      Cancel
+                    </Button>
+                    <Button
+                      className={cn('h-12 rounded-full px-6 text-sm font-semibold', proofMethod.buttonClass)}
+                      onClick={confirmPayment}
+                      disabled={
+                        isSubmittingProof ||
+                        !paymentProof.referenceId.trim() ||
+                        !paymentProof.accountName.trim() ||
+                        !paymentCaptchaToken
+                      }
+                    >
+                      {isSubmittingProof ? 'Submitting proof...' : 'Done Paying'}
+                      {!isSubmittingProof && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(contactMethod)} onOpenChange={(open) => (!open ? closeContactDialog() : undefined)}>
+        <DialogContent className="max-h-[calc(100vh-1.5rem)] max-w-3xl overflow-hidden border-border/70 p-0 sm:max-h-[calc(100vh-2rem)]">
+          {contactMethod && (
+            <div className="grid max-h-[calc(100vh-1.5rem)] gap-0 lg:grid-cols-[0.92fr_1.08fr] sm:max-h-[calc(100vh-2rem)]">
+              <div className={cn('space-y-6 overflow-y-auto p-5 text-white sm:p-6 lg:p-8', `bg-gradient-to-br ${contactMethod.gradientClass}`)}>
+                <Badge className="w-fit rounded-full border-white/20 bg-white/15 px-4 py-1.5 text-white hover:bg-white/15">
+                  Direct owner follow-up
+                </Badge>
+                <div className="space-y-3 pr-10 sm:pr-12">
+                  <DialogTitle className="font-display text-3xl">{contactMethod.label} request</DialogTitle>
+                  <DialogDescription className="text-white/80">
+                    Share the best contact details so the owner can send the exact payment instructions for this order.
+                  </DialogDescription>
+                </div>
+
+                <div className="space-y-3 rounded-[28px] border border-white/15 bg-white/10 p-5">
+                  {contactMethod.steps.map((step, index) => (
+                    <div key={step} className="flex items-start gap-3">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-semibold">
+                        {index + 1}
+                      </div>
+                      <p className="text-sm leading-6 text-white/85">{step}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-[24px] border border-white/15 bg-white/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Order total</p>
+                  <p className="mt-2 text-2xl font-bold">${orderData.totalPrice.toFixed(2)}</p>
+                </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmittingProof || !recaptchaSiteKey}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontWeight: '600',
-                  cursor: isSubmittingProof ? 'not-allowed' : 'pointer',
-                  marginTop: '20px',
-                  fontSize: '0.9rem',
-                  opacity: isSubmittingProof ? 0.7 : 1,
-                }}
-              >
-                {isSubmittingProof ? 'Submitting...' : 'Done Paying'}
-              </button>
-            </form>
+              <div className="flex min-h-0 flex-col bg-background">
+                <div className="flex-1 space-y-6 overflow-y-auto p-5 sm:p-6 lg:p-8">
+                  <DialogHeader className="space-y-3 pr-10 text-left sm:pr-12">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Lock className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <DialogTitle className="text-2xl text-foreground">Request payment details</DialogTitle>
+                      <DialogDescription className="text-sm leading-6 text-muted-foreground">
+                        This sends your order and contact details to the owner so they can follow up with Apple Pay or Zelle instructions.
+                      </DialogDescription>
+                    </div>
+                  </DialogHeader>
 
-            <p className="modal-note">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Encrypted & Secure — {currentMethod.note}. We'll review your payment details before marking the order as paid.
-            </p>
-          </div>
-        </div>
-      )}
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contactName">Full name *</Label>
+                      <Input
+                        id="contactName"
+                        className="h-12 rounded-2xl"
+                        placeholder="John Doe"
+                        value={contactData.name}
+                        onChange={(event) => setContactData((current) => ({ ...current, name: event.target.value }))}
+                        required
+                      />
+                    </div>
 
-      {/* Contact Form Modal */}
-      {isContactFormOpen && contactMethod && (
-        <div className="modal-overlay active" onClick={closeContactForm}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%' }}>
-            <button className="modal-close" onClick={closeContactForm}>
-              <X size={16} />
-            </button>
+                    <div className="space-y-2">
+                      <Label htmlFor="contactEmail">Email address *</Label>
+                      <Input
+                        id="contactEmail"
+                        type="email"
+                        className="h-12 rounded-2xl"
+                        placeholder="john@example.com"
+                        value={contactData.email}
+                        onChange={(event) => setContactData((current) => ({ ...current, email: event.target.value }))}
+                        required
+                      />
+                    </div>
 
-            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '1.8rem', fontWeight: '800', marginBottom: '24px', color: '#0a1628' }}>Payment Method</h2>
-            
-            <form onSubmit={submitContactForm} style={{ textAlign: 'left' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <Label htmlFor="contact-name" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}>Name <span style={{color: '#ef4444'}}>*</span></Label>
-                <Input
-                  id="contact-name"
-                  value={contactData.name}
-                  onChange={(e) => setContactData({ ...contactData, name: e.target.value })}
-                  placeholder="Name"
-                  required
-                />
+                    <div className="space-y-2">
+                      <Label htmlFor="contactPhone">Phone number *</Label>
+                      <Input
+                        id="contactPhone"
+                        type="tel"
+                        className="h-12 rounded-2xl"
+                        placeholder="(555) 123-4567"
+                        value={contactData.phone}
+                        onChange={(event) => setContactData((current) => ({ ...current, phone: event.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-[28px] border border-border/70 bg-muted/35 p-4 sm:p-5">
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-foreground">Security check</p>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Complete the captcha before sending your request to the owner.
+                      </p>
+                    </div>
+                    <RecaptchaWidget
+                      siteKey={recaptchaSiteKey}
+                      onVerify={setContactCaptchaToken}
+                      resetKey={contactCaptchaResetKey}
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-border/70 bg-background/95 px-5 py-4 backdrop-blur sm:px-6 lg:px-8">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <Button variant="outline" className="h-12 rounded-full px-6" onClick={closeContactDialog}>
+                      Cancel
+                    </Button>
+                    <Button
+                      className={cn('h-12 rounded-full px-6 text-sm font-semibold', contactMethod.buttonClass)}
+                      onClick={submitContactForm}
+                      disabled={
+                        isSubmitting ||
+                        !contactData.name.trim() ||
+                        !contactData.email.trim() ||
+                        !contactData.phone.trim() ||
+                        !contactCaptchaToken
+                      }
+                    >
+                      {isSubmitting ? 'Sending request...' : contactMethod.actionLabel}
+                      {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <Label htmlFor="contact-email" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}>Email Address <span style={{color: '#ef4444'}}>*</span></Label>
-                <Input
-                  id="contact-email"
-                  type="email"
-                  value={contactData.email}
-                  onChange={(e) => setContactData({ ...contactData, email: e.target.value })}
-                  placeholder="Email"
-                  required
-                />
-              </div>
-              <div style={{ marginBottom: '30px' }}>
-                <Label htmlFor="contact-phone" style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}>Phone <span style={{color: '#ef4444'}}>*</span></Label>
-                <Input
-                  id="contact-phone"
-                  type="tel"
-                  value={contactData.phone}
-                  onChange={(e) => setContactData({ ...contactData, phone: e.target.value })}
-                  placeholder="Phone"
-                  required
-                />
-              </div>
-              <div
-                style={{
-                  marginBottom: '20px',
-                  padding: '14px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  background: '#f8fafc',
-                }}
-              >
-                <p style={{ margin: '0 0 12px', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' }}>
-                  Security Check
-                </p>
-                <RecaptchaWidget
-                  siteKey={recaptchaSiteKey}
-                  onVerify={setContactCaptchaToken}
-                  resetKey={contactCaptchaResetKey}
-                />
-              </div>
-              <Button type="submit" size="lg" style={{ width: '100%', fontSize: '1.1rem' }} disabled={isSubmitting || !recaptchaSiteKey}>
-                {isSubmitting ? 'Submitting...' : 'Submit'}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showThankYou} onOpenChange={setShowThankYou}>
+        <DialogContent className="max-w-lg border-border/70 p-6 sm:p-8">
+          <div className="space-y-6 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+
+            <div className="space-y-3">
+              <DialogTitle className="font-display text-3xl text-foreground">
+                {contactFormSuccess ? 'Request sent' : 'Payment proof submitted'}
+              </DialogTitle>
+              <DialogDescription className="text-sm leading-7 text-muted-foreground">
+                {contactFormSuccess
+                  ? 'The owner received your request and will contact you with the payment instructions for this order.'
+                  : 'The owner received your payment proof and will manually verify it before updating the order status.'}
+              </DialogDescription>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button asChild variant="outline" className="h-12 rounded-full">
+                <Link to="/products">Browse products</Link>
               </Button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Thank You Modal */}
-      {showThankYou && (
-        <div className="modal-overlay active" onClick={() => setShowThankYou(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ width: '80px', height: '80px', background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </div>
-              <h2 style={{ fontFamily: 'Inter, sans-serif', fontSize: '2rem', fontWeight: '800', marginBottom: '16px' }}>Thank You!</h2>
-              {contactFormSuccess ? null : (
-                <p style={{ fontSize: '1.125rem', color: '#475569', marginBottom: '16px' }}>
-                  Your payment details have been submitted successfully.
-                </p>
-              )}
-              <p style={{ fontSize: contactFormSuccess ? '1.125rem' : '0.875rem', color: contactFormSuccess ? '#475569' : '#94a3b8', marginBottom: '32px' }}>
-                {contactFormSuccess 
-                  ? "Please check your email, the payment details for your order have been sent to you."
-                  : "We'll verify your PayPal or Venmo payment and follow up if anything doesn't match."}
-              </p>
-              <Link 
-                to="/" 
-                onClick={() => localStorage.removeItem('gxz-cart')}
-                style={{ display: 'inline-block', padding: '14px 32px', background: '#2563eb', color: 'white', borderRadius: '12px', textDecoration: 'none', fontWeight: '600' }}
-              >
-                Back to Home
-              </Link>
+              <Button asChild className="h-12 rounded-full">
+                <Link to="/">Return home</Link>
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default Payment;
-
