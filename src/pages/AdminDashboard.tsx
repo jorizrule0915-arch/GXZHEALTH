@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
@@ -31,6 +30,9 @@ interface Order {
   total_items: number;
   total_price: number;
   payment_method: string | null;
+  payment_reference_id: string | null;
+  payer_account_name: string | null;
+  payment_submitted_at: string | null;
   status: string;
   created_at: string;
   customer_name: string | null;
@@ -59,6 +61,16 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
     label: 'Processing',
     color: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
     icon: <RefreshCw className="w-3 h-3" />,
+  },
+  payment_submitted: {
+    label: 'Payment Submitted',
+    color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    icon: <ShieldCheck className="w-3 h-3" />,
+  },
+  payment_contact_requested: {
+    label: 'Payment Contact Requested',
+    color: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+    icon: <Mail className="w-3 h-3" />,
   },
   pending: {
     label: 'Pending',
@@ -161,7 +173,9 @@ export default function AdminDashboard() {
         !q ||
         o.order_number.toLowerCase().includes(q) ||
         (o.customer_name ?? '').toLowerCase().includes(q) ||
-        (o.customer_email ?? '').toLowerCase().includes(q);
+        (o.customer_email ?? '').toLowerCase().includes(q) ||
+        (o.payment_reference_id ?? '').toLowerCase().includes(q) ||
+        (o.payer_account_name ?? '').toLowerCase().includes(q);
       return matchesStatus && matchesSearch;
     });
   }, [orders, search, statusFilter]);
@@ -169,7 +183,12 @@ export default function AdminDashboard() {
   const stats = useMemo(() => ({
     total: orders.length,
     revenue: orders.reduce((s, o) => s + Number(o.total_price), 0),
-    pending: orders.filter(o => o.status === 'pending' || o.status === 'processing').length,
+    pending: orders.filter(o =>
+      o.status === 'pending' ||
+      o.status === 'processing' ||
+      o.status === 'payment_submitted' ||
+      o.status === 'payment_contact_requested'
+    ).length,
     complete: orders.filter(o => o.status === 'complete' || o.status === 'completed').length,
   }), [orders]);
 
@@ -318,13 +337,15 @@ export default function AdminDashboard() {
                     <Filter className="w-3.5 h-3.5 mr-1 text-slate-400" />
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="complete">Complete</SelectItem>
-                  </SelectContent>
-                </Select>
+                    <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem value="payment_submitted">Payment Submitted</SelectItem>
+                      <SelectItem value="payment_contact_requested">Payment Contact Requested</SelectItem>
+                      <SelectItem value="complete">Complete</SelectItem>
+                    </SelectContent>
+                  </Select>
               </div>
             </div>
           </CardHeader>
@@ -440,6 +461,40 @@ export default function AdminDashboard() {
                                           {order.customer_state && `, ${order.customer_state}`}
                                           {order.customer_zip && ` ${order.customer_zip}`}
                                         </span>
+                                      </div>
+                                    )}
+                                    {(order.payment_method || order.payment_reference_id || order.payer_account_name) && (
+                                      <div className="pt-3 mt-3 border-t border-slate-700">
+                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                                          Payment Details
+                                        </p>
+                                        {order.payment_method && (
+                                          <div className="text-sm text-slate-300">
+                                            <span className="text-slate-500">Method:</span> {order.payment_method}
+                                          </div>
+                                        )}
+                                        {order.payment_reference_id && (
+                                          <div className="text-sm text-slate-300">
+                                            <span className="text-slate-500">Reference ID:</span> {order.payment_reference_id}
+                                          </div>
+                                        )}
+                                        {order.payer_account_name && (
+                                          <div className="text-sm text-slate-300">
+                                            <span className="text-slate-500">Account Name:</span> {order.payer_account_name}
+                                          </div>
+                                        )}
+                                        {order.payment_submitted_at && (
+                                          <div className="text-sm text-slate-300">
+                                            <span className="text-slate-500">Submitted:</span>{' '}
+                                            {new Date(order.payment_submitted_at).toLocaleString('en-US', {
+                                              month: 'short',
+                                              day: 'numeric',
+                                              year: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   </div>

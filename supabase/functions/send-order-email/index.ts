@@ -1,6 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+declare const Deno: {
+  env: {
+    get: (name: string) => string | undefined
+  }
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void
+}
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY_NEW')
+const RECAPTCHA_SECRET_KEY = Deno.env.get('RECAPTCHA_SECRET_KEY')
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +14,47 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-serve(async (req) => {
+async function verifyRecaptchaToken(token: string, remoteIp: string | null) {
+  if (!RECAPTCHA_SECRET_KEY) {
+    throw new Error('Missing RECAPTCHA_SECRET_KEY')
+  }
+
+  const body = new URLSearchParams({
+    secret: RECAPTCHA_SECRET_KEY,
+    response: token,
+  })
+
+  if (remoteIp) {
+    body.set('remoteip', remoteIp)
+  }
+
+  const verificationResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body.toString(),
+  })
+
+  const verificationResult = await verificationResponse.json()
+
+  if (!verificationResponse.ok || !verificationResult.success) {
+    console.error('❌ reCAPTCHA verification failed:', JSON.stringify(verificationResult))
+    return false
+  }
+
+  return true
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Unknown error'
+}
+
+function getErrorStack(error: unknown) {
+  return error instanceof Error ? error.stack : undefined
+}
+
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -17,7 +63,17 @@ serve(async (req) => {
     console.log('📧 Function called')
     console.log('🔑 API Key loaded:', !!RESEND_API_KEY)
     
-    const { orderData, paymentMethod } = await req.json()
+    const { orderData, paymentMethod, paymentProof, recaptchaToken } = await req.json()
+    const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+
+    if (!recaptchaToken || !(await verifyRecaptchaToken(recaptchaToken, remoteIp))) {
+      return new Response(JSON.stringify({
+        error: 'reCAPTCHA verification failed',
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
     
     const orderNumber = orderData.orderNumber || `ORD-${Date.now()}`
     const subtotal = typeof orderData.subtotal === 'number'
@@ -26,6 +82,18 @@ serve(async (req) => {
     const shippingCost = typeof orderData.shippingCost === 'number'
       ? orderData.shippingCost
       : Math.max(orderData.totalPrice - subtotal, 0)
+    const paymentProofHtml = paymentProof
+      ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Reference ID:</td>
+                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${paymentProof.referenceId}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Account Name:</td>
+                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${paymentProof.accountName}</td>
+                      </tr>
+        `
+      : ''
     const itemsListHtml = orderData.items.map((item: any) => 
       `<tr>
         <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${item.name}</td>
@@ -80,6 +148,7 @@ serve(async (req) => {
                         <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Payment:</td>
                         <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${paymentMethod}</td>
                       </tr>
+                      ${paymentProofHtml}
                     </table>
                   </td>
                 </tr>
@@ -178,8 +247,8 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 Function crashed:', error)
     return new Response(JSON.stringify({ 
-      error: error.message,
-      stack: error.stack 
+      error: getErrorMessage(error),
+      stack: getErrorStack(error),
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

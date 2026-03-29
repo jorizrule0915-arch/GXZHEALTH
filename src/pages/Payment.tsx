@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import RecaptchaWidget from '@/components/RecaptchaWidget';
 import './Payment.css';
 
 interface OrderItem {
@@ -33,19 +34,34 @@ interface OrderData {
   };
 }
 
+interface PaymentProof {
+  referenceId: string;
+  accountName: string;
+}
+
 const Payment = () => {
   const location = useLocation();
   const { toast } = useToast();
+  const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentMethod, setCurrentMethod] = useState<any>(null);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [isSubmittingProof, setIsSubmittingProof] = useState(false);
+  const [paymentProof, setPaymentProof] = useState<PaymentProof>({
+    referenceId: '',
+    accountName: '',
+  });
   
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
   const [contactMethod, setContactMethod] = useState<any>(null);
   const [contactData, setContactData] = useState({ name: '', email: '', phone: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [contactFormSuccess, setContactFormSuccess] = useState(false);
+  const [paymentCaptchaToken, setPaymentCaptchaToken] = useState<string | null>(null);
+  const [contactCaptchaToken, setContactCaptchaToken] = useState<string | null>(null);
+  const [paymentCaptchaResetKey, setPaymentCaptchaResetKey] = useState(0);
+  const [contactCaptchaResetKey, setContactCaptchaResetKey] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -60,6 +76,23 @@ const Payment = () => {
       }
     }
   }, [location]);
+
+  const resetPaymentProof = () => {
+    setPaymentProof({
+      referenceId: '',
+      accountName: '',
+    });
+  };
+
+  const resetPaymentCaptcha = () => {
+    setPaymentCaptchaToken(null);
+    setPaymentCaptchaResetKey((current) => current + 1);
+  };
+
+  const resetContactCaptcha = () => {
+    setContactCaptchaToken(null);
+    setContactCaptchaResetKey((current) => current + 1);
+  };
 
   const methodData = {
     paypal: {
@@ -104,20 +137,59 @@ const Payment = () => {
 
   const openModal = (method: string) => {
     setCurrentMethod(methodData[method as keyof typeof methodData]);
+    resetPaymentProof();
+    resetPaymentCaptcha();
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
+    resetPaymentProof();
+    resetPaymentCaptcha();
   };
 
-  const confirmPayment = async () => {
+  const closeContactForm = () => {
+    setIsContactFormOpen(false);
+    resetContactCaptcha();
+  };
+
+  const confirmPayment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const trimmedReferenceId = paymentProof.referenceId.trim();
+    const trimmedAccountName = paymentProof.accountName.trim();
+
+    if (!trimmedReferenceId || !trimmedAccountName) {
+      toast({
+        title: "Missing payment details",
+        description: "Please enter your reference ID and the name used on PayPal or Venmo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!recaptchaSiteKey || !paymentCaptchaToken) {
+      toast({
+        title: "Complete the security check",
+        description: "Please complete the reCAPTCHA before submitting your payment details.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmittingProof(true);
+
     try {
       console.log('Sending order email...', orderData);
       const { data, error } = await supabase.functions.invoke('send-order-email', {
         body: {
           orderData: orderData,
-          paymentMethod: currentMethod?.label || 'Unknown'
+          paymentMethod: currentMethod?.label || 'Unknown',
+          paymentProof: {
+            referenceId: trimmedReferenceId,
+            accountName: trimmedAccountName,
+          },
+          recaptchaToken: paymentCaptchaToken,
         }
       });
       
@@ -133,8 +205,11 @@ const Payment = () => {
       if (orderData.orderNumber) {
         await (supabase.from('orders') as any)
           .update({ 
-            status: 'complete',
-            payment_method: currentMethod?.label || 'Unknown'
+            status: 'payment_submitted',
+            payment_method: currentMethod?.label || 'Unknown',
+            payment_reference_id: trimmedReferenceId,
+            payer_account_name: trimmedAccountName,
+            payment_submitted_at: new Date().toISOString(),
           })
           .eq('order_number', orderData.orderNumber);
       }
@@ -142,6 +217,9 @@ const Payment = () => {
       console.error('Error sending email:', err);
       alert('Error: ' + err);
       return;
+    } finally {
+      setIsSubmittingProof(false);
+      resetPaymentCaptcha();
     }
 
     closeModal();
@@ -149,13 +227,14 @@ const Payment = () => {
     localStorage.removeItem('gxz-cart');
     
     toast({
-      title: "Payment Confirmed!",
-      description: "Thank you for your order."
+      title: "Payment Submitted",
+      description: "Your payment details were sent. We'll verify them shortly."
     });
   };
 
   const openContactForm = (method: string) => {
     setContactMethod(methodData[method as keyof typeof methodData]);
+    resetContactCaptcha();
     if (orderData?.customer) {
       setContactData({
         name: orderData.customer.name || '',
@@ -168,6 +247,16 @@ const Payment = () => {
 
   const submitContactForm = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!recaptchaSiteKey || !contactCaptchaToken) {
+      toast({
+        title: "Complete the security check",
+        description: "Please complete the reCAPTCHA before sending your payment request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const updatedOrderData = {
@@ -178,7 +267,8 @@ const Payment = () => {
       const { data, error } = await supabase.functions.invoke('send-order-email', {
         body: {
           orderData: updatedOrderData,
-          paymentMethod: contactMethod?.label || 'Unknown'
+          paymentMethod: contactMethod?.label || 'Unknown',
+          recaptchaToken: contactCaptchaToken,
         }
       });
       
@@ -193,7 +283,7 @@ const Payment = () => {
         // Also update the order status
         await (supabase.from('orders') as any)
           .update({ 
-            status: 'complete',
+            status: 'payment_contact_requested',
             payment_method: contactMethod?.label || 'Unknown',
             customer_name: contactData.name,
             customer_email: contactData.email,
@@ -203,7 +293,7 @@ const Payment = () => {
       }
       
       setIsSubmitting(false);
-      setIsContactFormOpen(false);
+      closeContactForm();
       setShowThankYou(true);
       setContactFormSuccess(true);
       localStorage.removeItem('gxz-cart');
@@ -211,6 +301,8 @@ const Payment = () => {
       console.error('Error sending email:', err);
       alert('Error: ' + err);
       setIsSubmitting(false);
+    } finally {
+      resetContactCaptcha();
     }
   };
 
@@ -549,27 +641,84 @@ const Payment = () => {
               )}
             </div>
 
-            <button 
-              onClick={confirmPayment}
-              style={{
-                width: '100%',
-                padding: '14px',
-                background: '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                marginTop: '20px',
-                fontSize: '0.9rem'
-              }}
-            >
-              ✓ I've Completed the Payment
-            </button>
+            <form onSubmit={confirmPayment} style={{ marginTop: '20px', textAlign: 'left' }}>
+              <div style={{ display: 'grid', gap: '14px' }}>
+                <div>
+                  <Label
+                    htmlFor="payment-reference-id"
+                    style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}
+                  >
+                    Reference ID / Transaction ID <span style={{ color: '#ef4444' }}>*</span>
+                  </Label>
+                  <Input
+                    id="payment-reference-id"
+                    value={paymentProof.referenceId}
+                    onChange={(e) => setPaymentProof((current) => ({ ...current, referenceId: e.target.value }))}
+                    placeholder="Please fill in your payment reference ID"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="payment-account-name"
+                    style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1e293b' }}
+                  >
+                    Name on PayPal / Venmo account <span style={{ color: '#ef4444' }}>*</span>
+                  </Label>
+                  <Input
+                    id="payment-account-name"
+                    value={paymentProof.accountName}
+                    onChange={(e) => setPaymentProof((current) => ({ ...current, accountName: e.target.value }))}
+                    placeholder="Enter the account name used for payment"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '18px',
+                  padding: '14px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  background: '#f8fafc',
+                }}
+              >
+                <p style={{ margin: '0 0 12px', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' }}>
+                  Security Check
+                </p>
+                <RecaptchaWidget
+                  siteKey={recaptchaSiteKey}
+                  onVerify={setPaymentCaptchaToken}
+                  resetKey={paymentCaptchaResetKey}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingProof || !recaptchaSiteKey}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  cursor: isSubmittingProof ? 'not-allowed' : 'pointer',
+                  marginTop: '20px',
+                  fontSize: '0.9rem',
+                  opacity: isSubmittingProof ? 0.7 : 1,
+                }}
+              >
+                {isSubmittingProof ? 'Submitting...' : 'Done Paying'}
+              </button>
+            </form>
 
             <p className="modal-note">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Encrypted & Secure — {currentMethod.note}
+              Encrypted & Secure — {currentMethod.note}. We'll review your payment details before marking the order as paid.
             </p>
           </div>
         </div>
@@ -577,9 +726,9 @@ const Payment = () => {
 
       {/* Contact Form Modal */}
       {isContactFormOpen && contactMethod && (
-        <div className="modal-overlay active" onClick={() => setIsContactFormOpen(false)}>
+        <div className="modal-overlay active" onClick={closeContactForm}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%' }}>
-            <button className="modal-close" onClick={() => setIsContactFormOpen(false)}>
+            <button className="modal-close" onClick={closeContactForm}>
               <X size={16} />
             </button>
 
@@ -618,7 +767,25 @@ const Payment = () => {
                   required
                 />
               </div>
-              <Button type="submit" size="lg" style={{ width: '100%', fontSize: '1.1rem' }} disabled={isSubmitting}>
+              <div
+                style={{
+                  marginBottom: '20px',
+                  padding: '14px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  background: '#f8fafc',
+                }}
+              >
+                <p style={{ margin: '0 0 12px', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' }}>
+                  Security Check
+                </p>
+                <RecaptchaWidget
+                  siteKey={recaptchaSiteKey}
+                  onVerify={setContactCaptchaToken}
+                  resetKey={contactCaptchaResetKey}
+                />
+              </div>
+              <Button type="submit" size="lg" style={{ width: '100%', fontSize: '1.1rem' }} disabled={isSubmitting || !recaptchaSiteKey}>
                 {isSubmitting ? 'Submitting...' : 'Submit'}
               </Button>
             </form>
@@ -639,13 +806,13 @@ const Payment = () => {
               <h2 style={{ fontFamily: 'Inter, sans-serif', fontSize: '2rem', fontWeight: '800', marginBottom: '16px' }}>Thank You!</h2>
               {contactFormSuccess ? null : (
                 <p style={{ fontSize: '1.125rem', color: '#475569', marginBottom: '16px' }}>
-                  Your payment has been received successfully.
+                  Your payment details have been submitted successfully.
                 </p>
               )}
               <p style={{ fontSize: contactFormSuccess ? '1.125rem' : '0.875rem', color: contactFormSuccess ? '#475569' : '#94a3b8', marginBottom: '32px' }}>
                 {contactFormSuccess 
                   ? "Please check your email, the payment details for your order have been sent to you."
-                  : "A confirmation email will be sent to you shortly with your order details."}
+                  : "We'll verify your PayPal or Venmo payment and follow up if anything doesn't match."}
               </p>
               <Link 
                 to="/" 

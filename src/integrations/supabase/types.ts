@@ -22,6 +22,9 @@ export type Database = {
           total_items: number
           total_price: number
           payment_method: string | null
+          payment_reference_id: string | null
+          payer_account_name: string | null
+          payment_submitted_at: string | null
           status: string
           created_at: string
           customer_name: string | null
@@ -39,6 +42,9 @@ export type Database = {
           total_items: number
           total_price: number
           payment_method?: string | null
+          payment_reference_id?: string | null
+          payer_account_name?: string | null
+          payment_submitted_at?: string | null
           status?: string
           created_at?: string
           customer_name?: string | null
@@ -56,6 +62,9 @@ export type Database = {
           total_items?: number
           total_price?: number
           payment_method?: string | null
+          payment_reference_id?: string | null
+          payer_account_name?: string | null
+          payment_submitted_at?: string | null
           status?: string
           created_at?: string
           customer_name?: string | null
