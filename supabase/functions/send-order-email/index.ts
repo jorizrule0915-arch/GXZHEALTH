@@ -65,6 +65,7 @@ Deno.serve(async (req: Request) => {
     
     const { orderData, paymentMethod, paymentProof, recaptchaToken } = await req.json()
     const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+    const siteUrl = req.headers.get('origin') || 'https://health.gxzhealth.com'
 
     if (!recaptchaToken || !(await verifyRecaptchaToken(recaptchaToken, remoteIp))) {
       return new Response(JSON.stringify({
@@ -82,6 +83,25 @@ Deno.serve(async (req: Request) => {
     const shippingCost = typeof orderData.shippingCost === 'number'
       ? orderData.shippingCost
       : Math.max(orderData.totalPrice - subtotal, 0)
+    const pipelineButtonsHtml = paymentMethod === 'Apple Pay' || paymentMethod === 'Zelle'
+      ? `
+                <tr>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; padding: 24px;">
+                      <tr>
+                        <td>
+                          <p style="color: #e2e8f0; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; margin: 0 0 8px 0; font-weight: 700;">Pipeline Actions</p>
+                          <p style="color: #cbd5e1; font-size: 14px; line-height: 1.7; margin: 0 0 16px 0;">Use these shortcuts for Apple Pay and Zelle orders when you want to open the pipeline or mark the payment progress faster. You may still be asked to sign in first.</p>
+                          <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}" style="display: inline-block; margin-right: 10px; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #1d4ed8; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Open Pipeline</a>
+                          <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}&action=processing" style="display: inline-block; margin-right: 10px; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #475569; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Mark Processing</a>
+                          <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}&action=complete" style="display: inline-block; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #059669; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Mark Paid</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+        `
+      : ''
     const paymentProofHtml = paymentProof
       ? `
                       <tr>
@@ -191,6 +211,7 @@ Deno.serve(async (req: Request) => {
                     </table>
                   </td>
                 </tr>
+                ${pipelineButtonsHtml}
                 
                 <!-- Footer -->
                 <tr>

@@ -1,262 +1,254 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowRight } from 'lucide-react';
+import { ArrowRight, ShoppingCart, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { products } from '@/lib/products';
+import ProductDetailModal, { buildProductDetail } from '@/components/ProductDetailModal';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import ProductDetailModal, { buildProductDetail } from '@/components/ProductDetailModal';
-
-
-const DETAIL_MODAL_IDS = new Set(['creatine', 'body-balm']);
+import { supabase } from '@/integrations/supabase/client';
+import { fallbackProducts, normalizeCatalogProduct, type CatalogProduct } from '@/lib/products';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0 }
+  visible: { opacity: 1, y: 0 },
 };
 
 const Products = () => {
   const { addItem } = useCart();
   const { toast } = useToast();
-
-  // ── Existing option-picker dialog (for non-detail products) ──
-  const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // ── New Amazon-style detail modal ──
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>(fallbackProducts);
+  const [loading, setLoading] = useState(true);
   const [detailProduct, setDetailProduct] = useState<ReturnType<typeof buildProductDetail> | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const handleAddToCart = (product: typeof products[0]) => {
-    // Products with a detail page open the detail modal instead
-    if (DETAIL_MODAL_IDS.has(product.id)) {
-      setDetailProduct(buildProductDetail(product));
-      setIsDetailOpen(true);
-      return;
-    }
+  useEffect(() => {
+    let ignore = false;
 
-    if (product.options && product.options.length > 0) {
-      setSelectedProduct(product);
-      setSelectedOption(product.options[0].value);
-      setIsDialogOpen(true);
-    } else {
-      addItem({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image
-      });
-      toast({
-        title: "Added to cart!",
-        description: `${product.name} has been added to your cart.`
-      });
-    }
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (ignore) {
+        return;
+      }
+
+      if (error || !data || data.length === 0) {
+        setCatalogProducts(fallbackProducts);
+        setLoading(false);
+        return;
+      }
+
+      setCatalogProducts(data.map(normalizeCatalogProduct));
+      setLoading(false);
+    };
+
+    fetchProducts();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const handleViewProduct = (product: CatalogProduct) => {
+    setDetailProduct(buildProductDetail(product));
+    setIsDetailOpen(true);
   };
 
-  const handleConfirmAddToCart = () => {
-    if (!selectedProduct) return;
-
-    const option = selectedProduct.options?.find(opt => opt.value === selectedOption);
-    const finalPrice = option?.price || selectedProduct.price;
-    const optionLabel = option?.label || '';
-
-    addItem({
-      id: `${selectedProduct.id}-${selectedOption}`,
-      name: `${selectedProduct.name} - ${optionLabel}`,
-      price: finalPrice,
-      image: selectedProduct.image
-    });
-
-    toast({
-      title: "Added to cart!",
-      description: `${selectedProduct.name} (${optionLabel}) has been added to your cart.`
-    });
-
-    setIsDialogOpen(false);
-    setSelectedProduct(null);
-  };
-
-  // Called from the detail modal's "Add to Cart" button
   const handleDetailAddToCart = (
     productId: string,
     option?: { value: string; label: string; price?: number }
   ) => {
-    if (!detailProduct) return;
+    if (!detailProduct) {
+      return;
+    }
 
     const finalPrice = option?.price ?? detailProduct.price;
-    const nameSuffix = option ? ` - ${option.label}` : '';
     const cartId = option ? `${productId}-${option.value}` : productId;
+    const nameSuffix = option ? ` - ${option.label}` : '';
 
     addItem({
       id: cartId,
       name: `${detailProduct.name}${nameSuffix}`,
       price: finalPrice,
-      image: detailProduct.images[0]
+      image: detailProduct.images[0],
     });
 
     toast({
-      title: "Added to cart!",
-      description: `${detailProduct.name}${nameSuffix} has been added to your cart.`
+      title: 'Added to cart!',
+      description: `${detailProduct.name}${nameSuffix} has been added to your cart.`,
     });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
-      {/* Header */}
-      <section className="pt-32 pb-16 bg-gradient-to-br from-muted via-background to-muted relative overflow-hidden">
-        <div className="absolute top-20 right-20 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-20 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
-        
-        <div className="container mx-auto px-6 relative z-10">
-          <motion.div 
+
+      <section className="relative overflow-hidden bg-gradient-to-br from-muted via-background to-muted pt-32 pb-16">
+        <div className="absolute top-20 right-20 h-64 w-64 rounded-full bg-teal-500/5 blur-3xl" />
+        <div className="absolute bottom-0 left-20 h-48 w-48 rounded-full bg-primary/5 blur-3xl" />
+
+        <div className="container relative z-10 mx-auto px-6">
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center max-w-3xl mx-auto"
+            className="mx-auto max-w-4xl text-center"
           >
-            <span className="text-secondary font-semibold text-sm uppercase tracking-wider">Our Catalog</span>
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mt-4 mb-6">
+            <span className="text-sm font-semibold uppercase tracking-wider text-secondary">Our Catalog</span>
+            <h1 className="mt-4 font-display text-4xl font-bold text-foreground md:text-5xl lg:text-6xl">
               Research Supplies
             </h1>
-            <p className="text-muted-foreground text-lg leading-relaxed">
-              Performance & Wellness Essentials
-              High-quality tools and formulations designed to support strength, recovery, and daily performance.
+            <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+              Performance & Wellness Essentials. Every product now opens with the same richer detail view so shoppers can read the item more precisely before adding it to cart.
             </p>
-            
-            <div className="flex justify-center gap-12 mt-10">
+
+            <div className="mt-10 flex flex-wrap justify-center gap-12">
               <div className="text-center">
-                <div className="font-display text-3xl font-bold text-secondary">6+</div>
-                <div className="text-sm text-muted-foreground">Product Categories</div>
+                <div className="font-display text-3xl font-bold text-secondary">{catalogProducts.length}+</div>
+                <div className="text-sm text-muted-foreground">Products</div>
               </div>
               <div className="text-center">
                 <div className="font-display text-3xl font-bold text-secondary">100%</div>
-                <div className="text-sm text-muted-foreground">Sterile</div>
+                <div className="text-sm text-muted-foreground">Detail-first browsing</div>
               </div>
               <div className="text-center">
                 <div className="font-display text-3xl font-bold text-secondary">Fast</div>
-                <div className="text-sm text-muted-foreground">Shipping</div>
+                <div className="text-sm text-muted-foreground">Shopping flow</div>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Products Grid */}
       <section className="py-20">
         <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {products.map((product, index) => {
-              const hasDetailModal = DETAIL_MODAL_IDS.has(product.id);
-              return (
-                <motion.div
+          {loading ? (
+            <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="space-y-4 rounded-3xl border border-border bg-card p-6">
+                  <Skeleton className="h-64 w-full rounded-2xl" />
+                  <Skeleton className="h-8 w-2/3" />
+                  <Skeleton className="h-16 w-full" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-20 rounded-full" />
+                    <Skeleton className="h-8 w-24 rounded-full" />
+                  </div>
+                  <Skeleton className="h-12 w-full rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2 xl:grid-cols-3">
+              {catalogProducts.map((product, index) => (
+                <motion.article
                   key={product.id}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true }}
                   variants={fadeInUp}
-                  transition={{ delay: index * 0.1 }}
-                  className="group bg-card rounded-3xl overflow-hidden shadow-card hover:shadow-xl transition-all duration-500 border border-border"
+                  transition={{ delay: index * 0.08 }}
+                  className="group flex h-full flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-all duration-500 hover:-translate-y-1 hover:shadow-xl"
                 >
-                  {/* Product Image */}
-                  <div
-                    className={`relative h-64 bg-gradient-to-br from-muted to-background overflow-hidden ${
-                      hasDetailModal ? 'cursor-pointer' : ''
-                    }`}
-                    onClick={() => hasDetailModal && handleAddToCart(product)}
+                  <button
+                    type="button"
+                    className="relative h-64 overflow-hidden bg-gradient-to-br from-muted to-background text-left"
+                    onClick={() => handleViewProduct(product)}
                   >
-                    <img 
-                      src={product.image} 
+                    <img
+                      src={product.image}
                       alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-secondary uppercase tracking-wider shadow-md">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+                    <div className="absolute top-4 right-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-secondary shadow-md backdrop-blur-sm">
                       {product.category}
                     </div>
-                    {/* "View Details" hover hint */}
-                    {hasDetailModal && (
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white font-semibold text-sm bg-black/50 px-4 py-2 rounded-full backdrop-blur-sm">
-                          View Details
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Card Content */}
-                  <div className="p-8">
-                    <h3
-                      className={`font-display text-2xl font-bold text-card-foreground mb-3 ${
-                        hasDetailModal ? 'cursor-pointer hover:text-secondary transition-colors' : ''
-                      }`}
-                      onClick={() => hasDetailModal && handleAddToCart(product)}
+                    <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-black/45 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                      <Sparkles className="h-4 w-4" />
+                      View Details
+                    </div>
+                  </button>
+
+                  <div className="flex flex-1 flex-col p-8">
+                    <button
+                      type="button"
+                      onClick={() => handleViewProduct(product)}
+                      className="text-left"
                     >
-                      {product.name}
-                    </h3>
-                    
-                    <p className="text-muted-foreground leading-relaxed mb-6">
+                      <h3 className="font-display text-2xl font-bold text-card-foreground transition-colors group-hover:text-secondary">
+                        {product.name}
+                      </h3>
+                    </button>
+
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                       {product.description}
                     </p>
-                    
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      {product.features.map((feature, i) => (
-                        <span 
-                          key={i}
-                          className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground"
+
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {product.features.slice(0, 3).map((feature) => (
+                        <span
+                          key={feature}
+                          className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground"
                         >
                           {feature}
                         </span>
                       ))}
                     </div>
-                    
-                    <div className="flex items-center justify-between pt-6 border-t border-border">
-                      <div>
-                        <span className="text-sm text-muted-foreground">Starting at</span>
-                        <div className="font-display text-3xl font-bold text-foreground">
-                          ${product.price.toFixed(2)}
+
+                    <div className="mt-auto pt-8">
+                      <div className="mb-5 flex items-end justify-between border-t border-border pt-6">
+                        <div>
+                          <span className="text-sm text-muted-foreground">Starting at</span>
+                          <div className="font-display text-3xl font-bold text-foreground">
+                            ${product.price.toFixed(2)}
+                          </div>
                         </div>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {product.options.length > 0 ? `${product.options.length} options` : 'Ready to shop'}
+                        </span>
                       </div>
+
                       <Button
                         variant="buy"
                         size="lg"
-                        onClick={() => handleAddToCart(product)}
+                        className="w-full"
+                        onClick={() => handleViewProduct(product)}
                       >
-                        <ShoppingCart className="w-4 h-4" />
-                        {hasDetailModal ? 'View & Buy' : 'Add to Cart'}
+                        <ShoppingCart className="h-4 w-4" />
+                        View Details
                       </Button>
                     </div>
                   </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                </motion.article>
+              ))}
+            </div>
+          )}
 
-          {/* Shop Now CTA */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mt-16"
+            className="mt-16 text-center"
           >
-            <h3 className="font-display text-2xl font-bold text-foreground mb-2">
+            <h3 className="mb-2 font-display text-2xl font-bold text-foreground">
               Want More Options?
             </h3>
-            <p className="text-muted-foreground mb-6">
-              Explore our complete collection with exclusive deals and bulk pricing options.
+            <p className="mb-6 text-muted-foreground">
+              Explore the catalog and open any product to see options, highlights, and fuller details before buying.
             </p>
-            <Button 
-              variant="hero" 
+            <Button
+              variant="hero"
               size="lg"
-              onClick={() => toast({ title: "COMING SOON!!" })}
+              onClick={() => toast({ title: 'Catalog refreshed from admin-supported product data.' })}
             >
-              Shop Now at GXZ Health
-              <ArrowRight className="w-5 h-5" />
+              Browse the Full Catalog
+              <ArrowRight className="h-5 w-5" />
             </Button>
           </motion.div>
         </div>
@@ -264,60 +256,12 @@ const Products = () => {
 
       <Footer />
 
-      {/* ── Amazon-style Detail Modal (Creatine & Body Balm only) ── */}
       <ProductDetailModal
         product={detailProduct}
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         onAddToCart={handleDetailAddToCart}
       />
-
-      {/* ── Existing option-picker Dialog (all other products) ── */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Select Option</DialogTitle>
-          </DialogHeader>
-          {selectedProduct && (
-            <div className="space-y-4">
-              <div className="relative h-48 rounded-xl overflow-hidden">
-                <img 
-                  src={selectedProduct.image} 
-                  alt={selectedProduct.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              
-              <div>
-                <h3 className="font-semibold text-lg mb-2">{selectedProduct.name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{selectedProduct.description}</p>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium mb-3 block">Choose an option:</Label>
-                <RadioGroup value={selectedOption} onValueChange={setSelectedOption}>
-                  {selectedProduct.options?.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2 p-3 border rounded-lg hover:border-foreground transition-colors cursor-pointer">
-                      <RadioGroupItem value={option.value} id={option.value} />
-                      <Label htmlFor={option.value} className="flex-1 cursor-pointer">
-                        {option.label}
-                        {option.price && (
-                          <span className="ml-2 font-semibold text-secondary">${option.price.toFixed(2)}</span>
-                        )}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-
-              <Button onClick={handleConfirmAddToCart} className="w-full" variant="buy" size="lg">
-                <ShoppingCart className="w-4 h-4" />
-                Add to Cart
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

@@ -395,30 +395,37 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
 
 export function buildProductDetail(product: {
   id: string;
+  slug?: string;
   name: string;
   category: string;
   price: number;
   description: string;
+  longDescription?: string;
   features: string[];
+  highlights?: string[];
   options?: ProductOption[];
   image: string;
+  gallery?: string[];
+  inStock?: boolean;
 }): ProductDetail {
-  const extra = PRODUCT_DETAILS[product.id];
+  const lookupKey = product.slug ?? product.id;
+  const extra = PRODUCT_DETAILS[lookupKey];
+  const providedGallery = product.gallery?.filter(Boolean) ?? [];
   if (!extra) {
     // Non-detail product: return minimal data with repeated placeholder image
     return {
       ...product,
-      images: Array(5).fill(product.image),
-      longDescription: product.description,
-      highlights: product.features,
-      inStock: true,
+      images: providedGallery.length > 0 ? providedGallery : Array(5).fill(product.image),
+      longDescription: product.longDescription || product.description,
+      highlights: product.highlights?.length ? product.highlights : product.features,
+      inStock: product.inStock ?? true,
     };
   }
   return {
     ...product,
-    images: getPlaceholderImages(product.id),
-    longDescription: extra.longDescription,
-    highlights: extra.highlights,
-    inStock: extra.inStock,
+    images: providedGallery.length > 0 ? providedGallery : getPlaceholderImages(lookupKey),
+    longDescription: product.longDescription || extra.longDescription,
+    highlights: product.highlights?.length ? product.highlights : extra.highlights,
+    inStock: product.inStock ?? extra.inStock,
   };
 }
