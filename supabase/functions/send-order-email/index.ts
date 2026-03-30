@@ -54,6 +54,30 @@ function getErrorStack(error: unknown) {
   return error instanceof Error ? error.stack : undefined
 }
 
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function formatCurrency(value: number) {
+  return `$${Number(value || 0).toFixed(2)}`
+}
+
+function formatCustomerAddress(customer: Record<string, unknown> | undefined) {
+  const lines = [
+    customer?.address,
+    [customer?.city, customer?.state, customer?.zipCode].filter(Boolean).join(', '),
+  ]
+    .map((line) => String(line ?? '').trim())
+    .filter(Boolean)
+
+  return lines.length > 0 ? lines.map((line) => escapeHtml(line)).join('<br>') : 'Not provided'
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -83,17 +107,27 @@ Deno.serve(async (req: Request) => {
     const shippingCost = typeof orderData.shippingCost === 'number'
       ? orderData.shippingCost
       : Math.max(orderData.totalPrice - subtotal, 0)
+    const totalPrice = typeof orderData.totalPrice === 'number'
+      ? orderData.totalPrice
+      : subtotal + shippingCost
+    const customer = orderData.customer ?? {}
+    const customerName = escapeHtml(customer.name || 'Unknown customer')
+    const customerEmail = escapeHtml(customer.email || 'Not provided')
+    const customerPhone = escapeHtml(customer.phone || 'Not provided')
+    const paymentMethodLabel = escapeHtml(paymentMethod || 'Not specified')
+    const itemCount = orderData.items.reduce((sum: number, item: any) => sum + Number(item.quantity ?? 0), 0)
+    const addressHtml = formatCustomerAddress(customer)
     const pipelineButtonsHtml = paymentMethod === 'Apple Pay' || paymentMethod === 'Zelle'
       ? `
                 <tr>
                   <td style="padding: 0 30px 30px 30px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; border-radius: 12px; padding: 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #0f172a 0%, #172554 100%); border: 1px solid #1e3a8a; border-radius: 20px; padding: 24px;">
                       <tr>
                         <td>
-                          <p style="color: #e2e8f0; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; margin: 0 0 8px 0; font-weight: 700;">Pipeline Actions</p>
-                          <p style="color: #cbd5e1; font-size: 14px; line-height: 1.7; margin: 0 0 16px 0;">Use these shortcuts for Apple Pay and Zelle orders when you want to open the pipeline or mark the payment progress faster. You may still be asked to sign in first.</p>
-                          <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}" style="display: inline-block; margin-right: 10px; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #1d4ed8; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Open Pipeline</a>
-                          <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}&action=processing" style="display: inline-block; margin-right: 10px; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #475569; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Mark Processing</a>
+                          <p style="color: #bfdbfe; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 10px 0; font-weight: 800;">Pipeline Actions</p>
+                          <p style="color: #dbeafe; font-size: 14px; line-height: 1.7; margin: 0 0 18px 0;">This Apple Pay or Zelle order still needs manual attention. Open the pipeline or update its stage directly from this email.</p>
+                          <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}" style="display: inline-block; margin-right: 10px; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #2563eb; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Open Pipeline</a>
+                          <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}&action=processing" style="display: inline-block; margin-right: 10px; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #334155; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Mark Processing</a>
                           <a href="${siteUrl}/admin?view=pipeline&order=${encodeURIComponent(orderNumber)}&action=complete" style="display: inline-block; margin-bottom: 10px; padding: 12px 18px; border-radius: 999px; background: #059669; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700;">Mark Paid</a>
                         </td>
                       </tr>
@@ -104,21 +138,29 @@ Deno.serve(async (req: Request) => {
       : ''
     const paymentProofHtml = paymentProof
       ? `
-                      <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Reference ID:</td>
-                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${paymentProof.referenceId}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Account Name:</td>
-                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${paymentProof.accountName}</td>
-                      </tr>
+        <div style="margin-top: 18px; border: 1px solid #dbeafe; border-radius: 18px; background: #f8fbff; padding: 18px;">
+          <p style="margin: 0 0 12px 0; color: #1d4ed8; font-size: 12px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;">Submitted Payment Proof</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Reference ID</td>
+              <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">${escapeHtml(paymentProof.referenceId)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Account Name</td>
+              <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">${escapeHtml(paymentProof.accountName)}</td>
+            </tr>
+          </table>
+        </div>
         `
       : ''
     const itemsListHtml = orderData.items.map((item: any) => 
       `<tr>
-        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${item.name}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: right;">$${item.total.toFixed(2)}</td>
+        <td style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
+          <div style="color: #0f172a; font-size: 15px; font-weight: 700;">${escapeHtml(item.name)}</div>
+          ${item.selectedOptionLabel ? `<div style="margin-top: 4px; color: #64748b; font-size: 13px;">Option: ${escapeHtml(item.selectedOptionLabel)}</div>` : ''}
+        </td>
+        <td style="padding: 16px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #0f172a; font-size: 14px; font-weight: 600;">${Number(item.quantity ?? 0)}</td>
+        <td style="padding: 16px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #0f172a; font-size: 14px; font-weight: 700;">${formatCurrency(Number(item.total ?? 0))}</td>
       </tr>`
     ).join('')
     
@@ -129,60 +171,128 @@ Deno.serve(async (req: Request) => {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f8fafc;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+      <body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 36%, #eef2ff 100%);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding: 36px 16px;">
           <tr>
             <td align="center">
-              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; background-color: #ffffff; border: 1px solid #dbeafe; border-radius: 28px; overflow: hidden; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);">
                 <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); padding: 40px 30px; text-align: center;">
-                    <img src="https://i.imgur.com/RNuAkfH.png" alt="GXZ Health" style="width: 80px; height: 80px; margin-bottom: 16px;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800;">New Order Received!</h1>
-                    <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 16px;">Order #${orderNumber}</p>
-                  </td>
-                </tr>
-                
-                <!-- Customer Info -->
-                <tr>
-                  <td style="padding: 30px;">
-                    <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin: 0 0 20px 0;">Customer Information</h2>
+                  <td style="background: radial-gradient(circle at top left, #60a5fa 0%, #2563eb 38%, #0f172a 100%); padding: 34px 30px 28px 30px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-size: 14px; width: 120px;">Name:</td>
-                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${orderData.customer.name}</td>
+                        <td style="vertical-align: top;">
+                          <p style="margin: 0 0 10px 0; color: #bfdbfe; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800;">GXZ Health Order Desk</p>
+                          <h1 style="color: #ffffff; margin: 0; font-size: 30px; line-height: 1.1; font-weight: 800;">New order received</h1>
+                          <p style="color: #dbeafe; margin: 10px 0 0 0; font-size: 15px; line-height: 1.7;">A fresh order just came through the store. Review the customer details, shipping fee, and total below.</p>
+                        </td>
+                        <td align="right" style="vertical-align: top;">
+                          <div style="display: inline-block; border: 1px solid rgba(191, 219, 254, 0.35); border-radius: 18px; background: rgba(15, 23, 42, 0.3); padding: 14px 16px; text-align: left;">
+                            <p style="margin: 0 0 6px 0; color: #bfdbfe; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800;">Order Number</p>
+                            <p style="margin: 0; color: #ffffff; font-size: 18px; line-height: 1.4; font-weight: 800;">${escapeHtml(orderNumber)}</p>
+                          </div>
+                        </td>
                       </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 22px 30px 8px 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Email:</td>
-                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${orderData.customer.email}</td>
+                        <td style="padding-right: 8px; padding-bottom: 12px;">
+                          <div style="border: 1px solid #dbeafe; border-radius: 18px; background: #f8fbff; padding: 16px;">
+                            <p style="margin: 0 0 6px 0; color: #64748b; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800;">Customer</p>
+                            <p style="margin: 0; color: #0f172a; font-size: 16px; font-weight: 800;">${customerName}</p>
+                          </div>
+                        </td>
+                        <td style="padding-left: 8px; padding-right: 8px; padding-bottom: 12px;">
+                          <div style="border: 1px solid #dbeafe; border-radius: 18px; background: #f8fbff; padding: 16px;">
+                            <p style="margin: 0 0 6px 0; color: #64748b; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800;">Payment</p>
+                            <p style="margin: 0; color: #0f172a; font-size: 16px; font-weight: 800;">${paymentMethodLabel}</p>
+                          </div>
+                        </td>
+                        <td style="padding-left: 8px; padding-bottom: 12px;">
+                          <div style="border: 1px solid #dbeafe; border-radius: 18px; background: #f8fbff; padding: 16px;">
+                            <p style="margin: 0 0 6px 0; color: #64748b; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800;">Shipping Fee</p>
+                            <p style="margin: 0; color: #0f172a; font-size: 16px; font-weight: 800;">${formatCurrency(shippingCost)}</p>
+                          </div>
+                        </td>
                       </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Phone:</td>
-                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${orderData.customer.phone}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-size: 14px; vertical-align: top;">Address:</td>
-                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${orderData.customer.address}<br>${orderData.customer.city || ''} ${orderData.customer.state || ''} ${orderData.customer.zipCode || ''}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Payment:</td>
-                        <td style="padding: 8px 0; color: #0f172a; font-size: 14px; font-weight: 600;">${paymentMethod}</td>
-                      </tr>
-                      ${paymentProofHtml}
                     </table>
                   </td>
                 </tr>
                 
-                <!-- Order Items -->
                 <tr>
-                  <td style="padding: 0 30px 30px 30px;">
-                    <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin: 0 0 20px 0;">Order Items</h2>
-                    <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                  <td style="padding: 8px 30px 0 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="width: 50%; padding-right: 10px; vertical-align: top;">
+                          <div style="border: 1px solid #e2e8f0; border-radius: 22px; background: #ffffff; padding: 24px;">
+                            <p style="margin: 0 0 14px 0; color: #1d4ed8; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 800;">Customer Information</p>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="padding: 7px 0; color: #64748b; font-size: 14px; width: 90px;">Name</td>
+                                <td style="padding: 7px 0; color: #0f172a; font-size: 14px; font-weight: 700;">${customerName}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 7px 0; color: #64748b; font-size: 14px;">Email</td>
+                                <td style="padding: 7px 0; color: #0f172a; font-size: 14px; font-weight: 700;">${customerEmail}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 7px 0; color: #64748b; font-size: 14px;">Phone</td>
+                                <td style="padding: 7px 0; color: #0f172a; font-size: 14px; font-weight: 700;">${customerPhone}</td>
+                              </tr>
+                            </table>
+                          </div>
+                        </td>
+                        <td style="width: 50%; padding-left: 10px; vertical-align: top;">
+                          <div style="border: 1px solid #e2e8f0; border-radius: 22px; background: #ffffff; padding: 24px;">
+                            <p style="margin: 0 0 14px 0; color: #1d4ed8; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 800;">Delivery & Payment</p>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="padding: 7px 0; color: #64748b; font-size: 14px; width: 90px; vertical-align: top;">Address</td>
+                                <td style="padding: 7px 0; color: #0f172a; font-size: 14px; font-weight: 700;">${addressHtml}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 7px 0; color: #64748b; font-size: 14px;">Method</td>
+                                <td style="padding: 7px 0; color: #0f172a; font-size: 14px; font-weight: 700;">${paymentMethodLabel}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 7px 0; color: #64748b; font-size: 14px;">Shipping</td>
+                                <td style="padding: 7px 0; color: #0f172a; font-size: 14px; font-weight: 700;">${formatCurrency(shippingCost)}</td>
+                              </tr>
+                            </table>
+                            ${paymentProofHtml}
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td style="padding: 24px 30px 0 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden; background: #ffffff;">
+                      <tr>
+                        <td style="padding: 24px 24px 10px 24px;">
+                          <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+                            <div>
+                              <p style="margin: 0; color: #1d4ed8; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 800;">Order Items</p>
+                              <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">${itemCount} item${itemCount === 1 ? '' : 's'} in this order</p>
+                            </div>
+                            <div style="border-radius: 999px; background: #eff6ff; padding: 10px 14px; color: #1d4ed8; font-size: 13px; font-weight: 800;">
+                              Total ${formatCurrency(totalPrice)}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                       <thead>
-                        <tr style="background-color: #f1f5f9;">
-                          <th style="padding: 12px; text-align: left; color: #475569; font-size: 14px; font-weight: 600;">Product</th>
-                          <th style="padding: 12px; text-align: center; color: #475569; font-size: 14px; font-weight: 600;">Qty</th>
-                          <th style="padding: 12px; text-align: right; color: #475569; font-size: 14px; font-weight: 600;">Total</th>
+                        <tr style="background-color: #f8fafc;">
+                          <th style="padding: 12px 16px; text-align: left; color: #475569; font-size: 13px; font-weight: 700;">Product</th>
+                          <th style="padding: 12px 16px; text-align: center; color: #475569; font-size: 13px; font-weight: 700;">Qty</th>
+                          <th style="padding: 12px 16px; text-align: right; color: #475569; font-size: 13px; font-weight: 700;">Line Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -192,32 +302,30 @@ Deno.serve(async (req: Request) => {
                   </td>
                 </tr>
                 
-                <!-- Total -->
                 <tr>
-                  <td style="padding: 0 30px 30px 30px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #eff6ff; border-radius: 8px; padding: 20px;">
+                  <td style="padding: 24px 30px 30px 30px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%); border: 1px solid #dbeafe; border-radius: 24px; padding: 24px;">
                       <tr>
-                        <td style="color: #64748b; font-size: 14px; padding-bottom: 10px;">Subtotal</td>
-                        <td style="color: #0f172a; font-size: 14px; font-weight: 700; text-align: right; padding-bottom: 10px;">$${subtotal.toFixed(2)}</td>
+                        <td style="color: #475569; font-size: 14px; padding-bottom: 12px;">Items subtotal</td>
+                        <td style="color: #0f172a; font-size: 15px; font-weight: 700; text-align: right; padding-bottom: 12px;">${formatCurrency(subtotal)}</td>
                       </tr>
                       <tr>
-                        <td style="color: #64748b; font-size: 14px; padding-bottom: 16px;">Shipping</td>
-                        <td style="color: #0f172a; font-size: 14px; font-weight: 700; text-align: right; padding-bottom: 16px;">$${shippingCost.toFixed(2)}</td>
+                        <td style="color: #475569; font-size: 14px; padding-bottom: 16px;">Shipping fee</td>
+                        <td style="color: #0f172a; font-size: 15px; font-weight: 700; text-align: right; padding-bottom: 16px;">${formatCurrency(shippingCost)}</td>
                       </tr>
                       <tr>
-                        <td style="color: #1e40af; font-size: 18px; font-weight: 700;">Total Amount</td>
-                        <td style="color: #2563eb; font-size: 28px; font-weight: 800; text-align: right;">$${orderData.totalPrice.toFixed(2)}</td>
+                        <td style="border-top: 1px solid #bfdbfe; padding-top: 18px; color: #1d4ed8; font-size: 18px; font-weight: 800;">Total amount</td>
+                        <td style="border-top: 1px solid #bfdbfe; padding-top: 18px; color: #2563eb; font-size: 30px; font-weight: 900; text-align: right;">${formatCurrency(totalPrice)}</td>
                       </tr>
                     </table>
                   </td>
                 </tr>
                 ${pipelineButtonsHtml}
                 
-                <!-- Footer -->
                 <tr>
-                  <td style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Thank you for your order!</p>
-                    <p style="color: #94a3b8; font-size: 12px; margin: 0;">&copy; 2025 GXZHEALTH. All rights reserved.</p>
+                  <td style="background: #f8fafc; padding: 24px 30px 30px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">GXZ Health order notification</p>
+                    <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.7;">This email was sent automatically when a customer completed checkout or submitted payment details on your website.</p>
                   </td>
                 </tr>
               </table>

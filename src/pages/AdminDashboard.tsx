@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   BarChart3,
@@ -79,6 +79,14 @@ interface ProductFormState {
 
 type AdminSection = 'overview' | 'sales' | 'pipeline' | 'orders' | 'products';
 type DashboardOrder = Omit<OrderRow, 'items'> & { items: OrderItem[] };
+type PipelineColumnId = 'payment_contact_requested' | 'processing' | 'complete';
+type PipelineColumn = {
+  id: PipelineColumnId;
+  title: string;
+  description: string;
+  orders: DashboardOrder[];
+  empty: string;
+};
 
 const ADMIN_PASSWORD = 'gxzhealth2025';
 
@@ -232,7 +240,7 @@ function productToForm(product: ProductRow): ProductFormState {
   };
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, className }: { status: string; className?: string }) {
   const config = statusConfig[status] ?? {
     label: status,
     color: 'bg-slate-500/10 text-slate-300 border-slate-500/20',
@@ -240,7 +248,7 @@ function StatusBadge({ status }: { status: string }) {
   };
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${config.color}`}>
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold', config.color, className)}>
       {config.icon}
       {config.label}
     </span>
@@ -299,6 +307,8 @@ export default function AdminDashboard() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [productForm, setProductForm] = useState<ProductFormState>(emptyProductForm());
   const [handledActionKey, setHandledActionKey] = useState('');
+  const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null);
+  const [activeDropColumn, setActiveDropColumn] = useState<PipelineColumnId | null>(null);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
@@ -430,6 +440,15 @@ export default function AdminDashboard() {
     });
 
     return true;
+  };
+
+  const movePipelineOrder = async (order: DashboardOrder, targetColumn: PipelineColumnId) => {
+    const nextStatus = targetColumn === 'complete' ? 'complete' : targetColumn;
+    if (order.status === nextStatus || (targetColumn === 'complete' && order.status === 'completed')) {
+      return;
+    }
+
+    await updateOrderStatus(order.id, nextStatus, `${order.order_number} moved to ${targetColumn === 'payment_contact_requested' ? 'Requested' : targetColumn === 'processing' ? 'Processing' : 'Paid'}.`);
   };
 
   const deleteOrder = async (orderId: string) => {
@@ -692,7 +711,7 @@ export default function AdminDashboard() {
       .map(([, value]) => value);
   }, [orders]);
 
-  const pipelineColumns = useMemo(() => {
+  const pipelineColumns = useMemo<PipelineColumn[]>(() => {
     const appleAndZelleOrders = orders.filter((order) => ['Apple Pay', 'Zelle'].includes(order.payment_method ?? ''));
 
     return [
@@ -719,6 +738,42 @@ export default function AdminDashboard() {
       },
     ];
   }, [orders]);
+
+  const handlePipelineDragStart = (event: ReactDragEvent<HTMLDivElement>, orderId: string) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', orderId);
+    setDraggingOrderId(orderId);
+  };
+
+  const handlePipelineDragEnd = () => {
+    setDraggingOrderId(null);
+    setActiveDropColumn(null);
+  };
+
+  const handlePipelineDragOver = (event: ReactDragEvent<HTMLDivElement>, columnId: PipelineColumnId) => {
+    event.preventDefault();
+    if (activeDropColumn !== columnId) {
+      setActiveDropColumn(columnId);
+    }
+  };
+
+  const handlePipelineDrop = async (event: ReactDragEvent<HTMLDivElement>, columnId: PipelineColumnId) => {
+    event.preventDefault();
+    const orderId = event.dataTransfer.getData('text/plain') || draggingOrderId;
+    setActiveDropColumn(null);
+    setDraggingOrderId(null);
+
+    if (!orderId) {
+      return;
+    }
+
+    const order = orders.find((row) => row.id === orderId);
+    if (!order) {
+      return;
+    }
+
+    await movePipelineOrder(order, columnId);
+  };
 
   const catalogProducts = useMemo(() => {
     if (products.length === 0) {
@@ -995,12 +1050,21 @@ export default function AdminDashboard() {
                     <CardDescription className="text-slate-400">
                       This board is for orders that still need manual confirmation. Email shortcuts can bring you here and update the status directly.
                     </CardDescription>
+                    <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-500">
+                      Drag cards between stages on desktop. Action buttons stay available for mobile and quick updates.
+                    </p>
                   </CardHeader>
                 </Card>
 
                 <div className="grid gap-4 xl:grid-cols-3">
                   {pipelineColumns.map((column) => (
-                    <Card key={column.id} className="border-slate-800 bg-slate-900/70">
+                    <Card
+                      key={column.id}
+                      className={cn(
+                        'border-slate-800 bg-slate-900/70 transition-colors',
+                        activeDropColumn === column.id && 'border-blue-500/60 bg-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]',
+                      )}
+                    >
                       <CardHeader>
                         <div className="flex items-center justify-between gap-3">
                           <div>
@@ -1010,19 +1074,42 @@ export default function AdminDashboard() {
                           <Badge className="border-slate-700 bg-slate-800 text-slate-200">{column.orders.length}</Badge>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent
+                        className={cn(
+                          'space-y-4 rounded-b-[inherit] transition-colors',
+                          activeDropColumn === column.id && 'bg-blue-500/5',
+                        )}
+                        onDragOver={(event) => handlePipelineDragOver(event, column.id)}
+                        onDragEnter={(event) => handlePipelineDragOver(event, column.id)}
+                        onDrop={(event) => void handlePipelineDrop(event, column.id)}
+                      >
                         {column.orders.length === 0 ? (
-                          <div className="rounded-2xl border border-dashed border-slate-800 p-4 text-sm text-slate-500">
+                          <div
+                            className={cn(
+                              'rounded-2xl border border-dashed border-slate-800 p-4 text-sm text-slate-500 transition-colors',
+                              activeDropColumn === column.id && 'border-blue-400/50 bg-blue-500/10 text-slate-300',
+                            )}
+                          >
                             {column.empty}
                           </div>
                         ) : column.orders.map((order) => (
-                          <div key={order.id} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="font-semibold text-white">{order.order_number}</p>
+                          <div
+                            key={order.id}
+                            draggable
+                            onDragStart={(event) => handlePipelineDragStart(event, order.id)}
+                            onDragEnd={handlePipelineDragEnd}
+                            className={cn(
+                              'space-y-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 transition-all',
+                              'cursor-grab active:cursor-grabbing hover:border-slate-700',
+                              draggingOrderId === order.id && 'scale-[0.99] border-blue-500/50 bg-slate-900 opacity-70 shadow-lg',
+                            )}
+                          >
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="font-semibold leading-snug text-white break-words">{order.order_number}</p>
                                 <p className="text-sm text-slate-400">{order.customer_name ?? 'Unknown customer'}</p>
                               </div>
-                              <StatusBadge status={order.status} />
+                              <StatusBadge status={order.status} className="self-start whitespace-nowrap" />
                             </div>
                             <div className="space-y-1 text-sm text-slate-300">
                               <p>{order.payment_method}</p>
@@ -1040,7 +1127,15 @@ export default function AdminDashboard() {
                                   Mark Paid
                                 </Button>
                               )}
-                              <Button size="sm" variant="outline" className="border-slate-700 bg-transparent text-slate-200 hover:bg-slate-800" onClick={() => setActiveSection('orders')}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-slate-700 bg-transparent text-slate-200 hover:bg-slate-800"
+                                onClick={() => {
+                                  setExpandedRow(order.id);
+                                  setActiveSection('orders');
+                                }}
+                              >
                                 Open Order
                               </Button>
                               <Button size="sm" variant="ghost" className="text-red-300 hover:bg-red-500/10 hover:text-red-200" onClick={() => void deleteOrder(order.id)}>
@@ -1131,10 +1226,9 @@ export default function AdminDashboard() {
                           const shippingCost = Math.max(orderTotal - orderSubtotal, 0);
 
                           return (
-                            <>
+                            <Fragment key={order.id}>
                               <TableRow
-                                key={order.id}
-                                className="cursor-pointer border-slate-800/70 transition-colors hover:bg-slate-800/40"
+                                className="cursor-pointer border-slate-800/70 transition-colors hover:bg-transparent hover:[&_td]:bg-slate-800/70"
                                 onClick={() => setExpandedRow(isExpanded ? null : order.id)}
                               >
                                 <TableCell className="pr-0">
@@ -1173,7 +1267,7 @@ export default function AdminDashboard() {
                               </TableRow>
 
                               {isExpanded && (
-                                <TableRow className="border-slate-800 bg-slate-950/70">
+                                <TableRow className="border-slate-800 bg-transparent hover:bg-transparent [&_td]:bg-slate-950/70 hover:[&_td]:bg-slate-950/80">
                                   <TableCell colSpan={9} className="px-6 py-4">
                                     <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
                                       <div className="space-y-4">
@@ -1266,7 +1360,7 @@ export default function AdminDashboard() {
                                   </TableCell>
                                 </TableRow>
                               )}
-                            </>
+                            </Fragment>
                           );
                         })}
                       </TableBody>
