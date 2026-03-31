@@ -25,7 +25,7 @@ const Checkout = () => {
 );
 
   const shippingCost = hasFreeShipping ? 0 : 10;
-  const orderTotal = calculateOrderTotal(totalPrice, totalItems);
+  const orderTotal = totalPrice + shippingCost;
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -47,24 +47,29 @@ const Checkout = () => {
       clearCart();
 
       // 🔥 ADD ITEMS INTO REACT STATE (NOT JUST localStorage)
-      decoded.items.forEach((item: any, index: number) => {
-        addItem({
-          id: `${index}-${item.name}`,
-          name: item.name,
-          price: item.price,
-          image: item.image || "/placeholder.png"
-        });
+     decoded.items.forEach((item: any, index: number) => {
+  const cleanName = item.name
+    .replace(/&#8211;/g, "-")
+    .replace(/&amp;/g, "&");
 
-        // Fix quantity
-        for (let i = 1; i < item.quantity; i++) {
-          addItem({
-            id: `${index}-${item.name}`,
-            name: item.name,
-            price: item.price,
-            image: item.image || "/placeholder.png"
-          });
-        }
-      });
+  // First item
+  addItem({
+    id: `${index}-${cleanName}`,
+    name: cleanName,
+    price: item.price,
+    image: item.image || "/placeholder.png"
+  });
+
+  // Handle quantity
+  for (let i = 1; i < item.quantity; i++) {
+    addItem({
+      id: `${index}-${cleanName}`,
+      name: cleanName,
+      price: item.price,
+      image: item.image || "/placeholder.png"
+    });
+  }
+});
 
       // ✅ CLEAN URL (NO RELOAD)
       window.history.replaceState({}, document.title, "/checkout");
