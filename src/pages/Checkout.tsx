@@ -16,7 +16,7 @@ import { useLocation } from "react-router-dom";
 
 const Checkout = () => {
   const location = useLocation();
-  const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCart();
+  const { items, updateQuantity, removeItem, totalPrice, totalItems, addItem, clearCart } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
   const shippingCost = calculateShippingCost(totalItems);
@@ -38,17 +38,30 @@ const Checkout = () => {
     try {
       const decoded = JSON.parse(decodeURIComponent(orderParam));
 
-      const formattedItems = decoded.items.map((item: any, index: number) => ({
-        id: `${index}-${item.name}`,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        image: "/placeholder.png"
-      }));
+      // 🔥 CLEAR EXISTING CART
+      clearCart();
 
-      localStorage.setItem("gxz-cart", JSON.stringify(formattedItems));
+      // 🔥 ADD ITEMS INTO REACT STATE (NOT JUST localStorage)
+      decoded.items.forEach((item: any, index: number) => {
+        addItem({
+          id: `${index}-${item.name}`,
+          name: item.name,
+          price: item.price,
+          image: "/placeholder.png"
+        });
 
-      // ✅ FIX: remove query without reload
+        // Fix quantity
+        for (let i = 1; i < item.quantity; i++) {
+          addItem({
+            id: `${index}-${item.name}`,
+            name: item.name,
+            price: item.price,
+            image: "/placeholder.png"
+          });
+        }
+      });
+
+      // ✅ CLEAN URL (NO RELOAD)
       window.history.replaceState({}, document.title, "/checkout");
 
     } catch (err) {
