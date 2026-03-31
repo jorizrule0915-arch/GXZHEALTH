@@ -21,10 +21,9 @@ const Checkout = () => {
   const navigate = useNavigate();
   // 🔥 Check if cart contains FREE SHIPPING product
   const hasFreeShipping = items.some(item =>
-    item.name.toLowerCase().includes("gxz glp-1")
-  );
+  item.name.toLowerCase().includes("gxz glp")
+);
 
-  // 🔥 Apply shipping rule
   const shippingCost = hasFreeShipping ? 0 : 10;
   const orderTotal = calculateOrderTotal(totalPrice, totalItems);
   const [customerInfo, setCustomerInfo] = useState({
@@ -53,7 +52,7 @@ const Checkout = () => {
           id: `${index}-${item.name}`,
           name: item.name,
           price: item.price,
-          image: "/placeholder.png"
+          image: item.image || "/placeholder.png"
         });
 
         // Fix quantity
@@ -62,7 +61,7 @@ const Checkout = () => {
             id: `${index}-${item.name}`,
             name: item.name,
             price: item.price,
-            image: "/placeholder.png"
+            image: item.image || "/placeholder.png"
           });
         }
       });
