@@ -19,7 +19,13 @@ const Checkout = () => {
   const { items, updateQuantity, removeItem, totalPrice, totalItems, addItem, clearCart } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const shippingCost = calculateShippingCost(totalItems);
+  // 🔥 Check if cart contains FREE SHIPPING product
+  const hasFreeShipping = items.some(item =>
+    item.name.toLowerCase().includes("gxz glp-1")
+  );
+
+  // 🔥 Apply shipping rule
+  const shippingCost = hasFreeShipping ? 0 : 10;
   const orderTotal = calculateOrderTotal(totalPrice, totalItems);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
