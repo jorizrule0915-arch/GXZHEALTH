@@ -48,7 +48,8 @@ const Checkout = () => {
 
       localStorage.setItem("gxz-cart", JSON.stringify(formattedItems));
 
-      window.location.href = "/checkout";
+      // ✅ FIX: remove query without reload
+      window.history.replaceState({}, document.title, "/checkout");
 
     } catch (err) {
       console.error("Invalid order data", err);
