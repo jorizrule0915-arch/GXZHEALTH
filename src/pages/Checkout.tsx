@@ -11,8 +11,11 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateOrderTotal, calculateShippingCost } from '@/lib/pricing';
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 const Checkout = () => {
+  const location = useLocation();
   const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -27,7 +30,31 @@ const Checkout = () => {
     state: '',
     zipCode: ''
   });
+  useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const orderParam = params.get("order");
 
+  if (orderParam) {
+    try {
+      const decoded = JSON.parse(decodeURIComponent(orderParam));
+
+      const formattedItems = decoded.items.map((item: any, index: number) => ({
+        id: `${index}-${item.name}`,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: "/placeholder.png"
+      }));
+
+      localStorage.setItem("gxz-cart", JSON.stringify(formattedItems));
+
+      window.location.href = "/checkout";
+
+    } catch (err) {
+      console.error("Invalid order data", err);
+    }
+  }
+}, []);
   const handleCheckout = async () => {
     if (items.length === 0) {
       toast({
