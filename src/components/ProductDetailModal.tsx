@@ -29,7 +29,7 @@ interface ProductDetail {
   longDescription: string;
   features: string[];
   options?: ProductOption[];
-  images: string[]; // array of 5 image URLs (front, back, side1, side2, detail)
+  images: string[];
   highlights: string[];
   inStock: boolean;
 }
@@ -38,8 +38,26 @@ interface ProductDetailModalProps {
   product: ProductDetail | null;
   isOpen: boolean;
   onClose: () => void;
-  onAddToCart: (productId: string, option?: ProductOption) => void;
+  onAddToCart: (productId: string, option?: ProductOption, image?: string) => void;
 }
+
+interface GalleryImage {
+  src: string;
+  label: string;
+  optionValue?: string;
+}
+
+const imageLabelOverrides: Record<string, { label: string; optionValue?: string }> = {
+  'reusable-pen.png': { label: 'Blue', optionValue: 'blue' },
+  'reusable-pen-black.jpeg': { label: 'Black', optionValue: 'black' },
+  'reusable-pen-darkgray.jpeg': { label: 'Dark Gray', optionValue: 'dark-gray' },
+  'reusable-pen-gold.jpeg': { label: 'Gold', optionValue: 'gold' },
+  'reusable-pen-gray.jpeg': { label: 'Gray', optionValue: 'gray' },
+  'reusable-pen-lightblue.jpeg': { label: 'Light Blue', optionValue: 'light-blue' },
+  'reusable-pen-pink.jpeg': { label: 'Pink', optionValue: 'pink' },
+  'reusable-pen-red.jpeg': { label: 'Red', optionValue: 'red' },
+  'reusable-pen-silver.jpeg': { label: 'Silver', optionValue: 'silver' },
+};
 
 // ─── Mock extended product data (swap images with real ones) ──────────────────
 
@@ -93,11 +111,108 @@ function getPlaceholderImages(productId: string): string[] {
   return seeds[productId] ?? Array(5).fill(bodyBalmImg);
 }
 
+const genericImageTokens = new Set([
+  'gxz',
+  'health',
+  'product',
+  'products',
+  'item',
+  'image',
+  'img',
+  'photo',
+  'reusable',
+  'injectable',
+  'injection',
+  'pen',
+  'front',
+  'back',
+  'side',
+  'detail',
+  'view',
+  'main',
+  'hero',
+  'copy',
+  'final',
+  'edited',
+]);
+
+function splitIntoTokens(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, '')
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token && !genericImageTokens.has(token) && !/^[a-f0-9]{6,}$/.test(token));
+}
+
+function titleCase(value: string) {
+  return value.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getFileName(value: string) {
+  const withoutQuery = value.split('?')[0];
+  const lastSegment = withoutQuery.split('/').pop() ?? withoutQuery;
+  return lastSegment;
+}
+
+function inferGalleryImages(images: string[], options: ProductOption[] | undefined, productName: string): GalleryImage[] {
+  return images.map((src, index) => {
+    const fileName = getFileName(src).toLowerCase();
+    const override = imageLabelOverrides[fileName];
+    if (override) {
+      return {
+        src,
+        label: override.label,
+        optionValue: override.optionValue,
+      };
+    }
+
+    const imageTokens = splitIntoTokens(fileName);
+    const bestMatch = (options ?? []).reduce<{ option?: ProductOption; score: number }>((best, option) => {
+      const optionTokens = splitIntoTokens(`${option.label} ${option.value}`);
+      const score = optionTokens.filter((token) => imageTokens.includes(token)).length;
+      return score > best.score ? { option, score } : best;
+    }, { score: 0 });
+
+    if (bestMatch.option && bestMatch.score > 0) {
+      return {
+        src,
+        label: bestMatch.option.label,
+        optionValue: bestMatch.option.value,
+      };
+    }
+
+    if (imageTokens.length > 0) {
+      return {
+        src,
+        label: titleCase(imageTokens.join(' ')),
+      };
+    }
+
+    return {
+      src,
+      label: index === 0 ? productName : `Image ${index + 1}`,
+    };
+  });
+}
+
 // ─── Image Carousel ───────────────────────────────────────────────────────────
 
-function ImageCarousel({ images, productName }: { images: string[]; productName: string }) {
+function ImageCarousel({
+  images,
+  productName,
+  imageFit = 'cover',
+}: {
+  images: GalleryImage[];
+  productName: string;
+  imageFit?: 'cover' | 'contain';
+}) {
   const [active, setActive] = useState(0);
   const [direction, setDirection] = useState(0);
+
+  useEffect(() => {
+    setActive(0);
+    setDirection(0);
+  }, [images]);
 
   const go = (idx: number) => {
     setDirection(idx > active ? 1 : -1);
@@ -107,12 +222,10 @@ function ImageCarousel({ images, productName }: { images: string[]; productName:
   const prev = () => go((active - 1 + images.length) % images.length);
   const next = () => go((active + 1) % images.length);
 
-  const labels = ['Front View', 'Back View', 'Side View', 'Detail', 'Lifestyle'];
-
   return (
     <div className="flex flex-col gap-3 w-full">
       {/* Main image */}
-      <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-muted border border-border group">
+      <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-border bg-white group">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.img
             key={active}
@@ -121,43 +234,56 @@ function ImageCarousel({ images, productName }: { images: string[]; productName:
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: direction * -40 }}
             transition={{ duration: 0.25 }}
-            src={images[active]}
-            alt={`${productName} - ${labels[active]}`}
-            className="w-full h-full object-cover"
+            src={images[active]?.src}
+            alt={`${productName} - ${images[active]?.label ?? `Image ${active + 1}`}`}
+            className={imageFit === 'contain'
+              ? 'h-full w-full object-contain p-4 md:p-6'
+              : 'h-full w-full object-cover'}
           />
         </AnimatePresence>
 
         {/* Label badge */}
         <div className="absolute bottom-3 left-3 px-3 py-1 bg-black/50 backdrop-blur-sm rounded-full text-xs text-white font-medium">
-          {labels[active] ?? `View ${active + 1}`}
+          {images[active]?.label ?? `Image ${active + 1}`}
         </div>
 
         {/* Nav arrows */}
-        <button
-          onClick={prev}
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <ChevronLeft className="w-4 h-4 text-foreground" />
-        </button>
-        <button
-          onClick={next}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <ChevronRight className="w-4 h-4 text-foreground" />
-        </button>
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={prev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronLeft className="w-4 h-4 text-foreground" />
+            </button>
+            <button
+              onClick={next}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronRight className="w-4 h-4 text-foreground" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Thumbnails */}
       <div className="flex gap-2 justify-center">
         {images.map((img, i) => (
           <button
-            key={i}
+            key={`${img.src}-${i}`}
             onClick={() => go(i)}
             className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
               i === active ? 'border-secondary scale-105 shadow-md' : 'border-border hover:border-muted-foreground'
             }`}
+            aria-label={`Show ${img.label}`}
           >
-            <img src={img} alt={labels[i]} className="w-full h-full object-cover" />
+            <img
+              src={img.src}
+              alt={img.label}
+              className={imageFit === 'contain'
+                ? 'h-full w-full bg-white object-contain p-1'
+                : 'h-full w-full object-cover'}
+            />
           </button>
         ))}
       </div>
@@ -189,9 +315,17 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
 
   const selectedOpt = product.options?.find(o => o.value === selectedOption);
   const displayPrice = selectedOpt?.price ?? product.price;
+  const allGalleryImages = inferGalleryImages(product.images, product.options, product.name);
+  const matchingGalleryImages = selectedOption
+    ? allGalleryImages.filter((image) => image.optionValue === selectedOption)
+    : [];
+  const visibleGalleryImages = matchingGalleryImages.length > 0
+    ? [...matchingGalleryImages, ...allGalleryImages.filter((image) => image.optionValue !== selectedOption)]
+    : allGalleryImages;
+  const prefersContainedImage = product.category.toLowerCase() === 'pen' || product.name.toLowerCase().includes('pen');
 
   const handleAdd = () => {
-    onAddToCart(product.id, selectedOpt);
+    onAddToCart(product.id, selectedOpt, visibleGalleryImages[0]?.src ?? product.images[0]);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -234,7 +368,11 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
                 <div className="grid md:grid-cols-2 gap-10">
 
                   {/* LEFT: Image Carousel */}
-                  <ImageCarousel images={product.images} productName={product.name} />
+                  <ImageCarousel
+                    images={visibleGalleryImages}
+                    productName={product.name}
+                    imageFit={prefersContainedImage ? 'contain' : 'cover'}
+                  />
 
                   {/* RIGHT: Product Info */}
                   <div className="flex flex-col gap-5">

@@ -2,6 +2,14 @@ import type { Json, Tables } from '@/integrations/supabase/types';
 import syringeImage from '@/assets/products/syringe.png';
 import cartridgeImage from '@/assets/products/cartridge.png';
 import penImage from '@/assets/products/reusable-pen.png';
+import penImageblack from '@/assets/products/reusable-pen-black.png';
+import penImagedarkgray from '@/assets/products/reusable-pen-darkgray.png';
+import penImagegold from '@/assets/products/reusable-pen-gold.png';
+import penImagegray from '@/assets/products/reusable-pen-gray.png';
+import penImagelightblue from '@/assets/products/reusable-pen-lightblue.png';
+import penImagepink from '@/assets/products/reusable-pen-pink.png';
+import penImagered from '@/assets/products/reusable-pen-red.png';
+import penImagesilver from '@/assets/products/reusable-pen-silver.png';
 import needlesImage from '@/assets/products/needles.png';
 import bodyBalmImage from '@/assets/products/Body Balm.jpg';
 import creatineImage from '@/assets/products/Creatine.jpg';
@@ -40,7 +48,21 @@ export type ProductRecord = Tables<'products'>;
 
 type BuiltInSeed = Omit<CatalogProduct, 'id' | 'image' | 'gallery' | 'imageUrl'>;
 
-const placeholderGallery = (image: string) => [image, image, image];
+const penColorOptions: ProductOption[] = [
+  { label: 'Blue', value: 'blue', price: 20 },
+  { label: 'Black', value: 'black', price: 20 },
+  { label: 'Dark Gray', value: 'dark-gray', price: 20 },
+  { label: 'Gold', value: 'gold', price: 20 },
+  { label: 'Gray', value: 'gray', price: 20 },
+  { label: 'Light Blue', value: 'light-blue', price: 20 },
+  { label: 'Pink', value: 'pink', price: 20 },
+  { label: 'Red', value: 'red', price: 20 },
+  { label: 'Silver', value: 'silver', price: 20 },
+];
+
+const placeholderGallery = (...images: string[]) => {
+  return images.length ? images : [];
+};
 
 const builtInMedia: Record<string, { image: string; gallery: string[] }> = {
   syringe: {
@@ -53,7 +75,7 @@ const builtInMedia: Record<string, { image: string; gallery: string[] }> = {
   },
   pen: {
     image: penImage,
-    gallery: placeholderGallery(penImage),
+    gallery: placeholderGallery(penImage, penImageblack, penImagedarkgray, penImagegold, penImagegray, penImagelightblue, penImagepink, penImagered, penImagesilver),
   },
   needles: {
     image: needlesImage,
@@ -114,11 +136,7 @@ const builtInSeeds: BuiltInSeed[] = [
     category: 'Pen',
     features: ['Metal construction', 'Adjustable dial', 'Reusable design'],
     highlights: ['Premium metal finish', 'Smooth dose control', 'Designed for long-term use'],
-    options: [
-      { label: 'Matte Black', value: 'matte-black', price: 20 },
-      { label: 'Silver', value: 'silver', price: 20 },
-      { label: 'Rose Gold', value: 'rose-gold', price: 20 },
-    ],
+    options: penColorOptions,
     inStock: true,
     isActive: true,
     sortOrder: 3,
@@ -244,6 +262,11 @@ export function normalizeCatalogProduct(record: ProductRecord): CatalogProduct {
   const builtIn = builtInSeedBySlug(record.slug);
   const builtInVisuals = builtInMedia[record.slug];
   const options = optionArrayFromJson(record.options);
+  const normalizedOptions = record.slug === 'pen' && options.length < penColorOptions.length
+    ? penColorOptions
+    : options.length > 0
+      ? options
+      : builtIn?.options ?? [];
 
   return {
     id: record.id,
@@ -261,7 +284,7 @@ export function normalizeCatalogProduct(record: ProductRecord): CatalogProduct {
     highlights: stringArrayFromJson(record.highlights).length > 0
       ? stringArrayFromJson(record.highlights)
       : builtIn?.highlights ?? [],
-    options: options.length > 0 ? options : builtIn?.options ?? [],
+    options: normalizedOptions,
     inStock: record.in_stock,
     isActive: record.is_active,
     sortOrder: record.sort_order ?? 0,

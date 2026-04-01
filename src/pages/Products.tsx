@@ -63,7 +63,8 @@ const Products = () => {
 
   const handleDetailAddToCart = (
     productId: string,
-    option?: { value: string; label: string; price?: number }
+    option?: { value: string; label: string; price?: number },
+    image?: string,
   ) => {
     if (!detailProduct) {
       return;
@@ -77,7 +78,7 @@ const Products = () => {
       id: cartId,
       name: `${detailProduct.name}${nameSuffix}`,
       price: finalPrice,
-      image: detailProduct.images[0],
+      image: image ?? detailProduct.images[0],
     });
 
     toast({
