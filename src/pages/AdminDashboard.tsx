@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  TicketPercent,
   Trash2,
   TrendingUp,
   Workflow,
@@ -41,6 +42,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { fallbackProducts, normalizeCatalogProduct, parseLineSeparatedList, slugify, type CatalogProduct } from '@/lib/products';
+import PromoProductsSection from '@/components/admin/PromoProductsSection';
 
 type OrderRow = Tables<'orders'>;
 type ProductRow = Tables<'products'>;
@@ -77,7 +79,7 @@ interface ProductFormState {
   options: ProductOptionForm[];
 }
 
-type AdminSection = 'overview' | 'sales' | 'pipeline' | 'orders' | 'products';
+type AdminSection = 'overview' | 'sales' | 'pipeline' | 'orders' | 'products' | 'promo-products';
 type DashboardOrder = Omit<OrderRow, 'items'> & { items: OrderItem[] };
 type PipelineColumnId = 'payment_contact_requested' | 'processing' | 'complete';
 type PipelineColumn = {
@@ -129,6 +131,7 @@ const sectionItems: Array<{ id: AdminSection; label: string; description: string
   { id: 'pipeline', label: 'Pipeline', description: 'Apple Pay / Zelle', icon: Workflow },
   { id: 'orders', label: 'Orders', description: 'All order records', icon: Package },
   { id: 'products', label: 'Products', description: 'Add and manage', icon: Boxes },
+  { id: 'promo-products', label: 'PROMO PRODUCTS', description: 'Influencer code tracking', icon: TicketPercent },
 ];
 
 function isOrderItem(value: unknown): value is OrderItem {
@@ -974,6 +977,10 @@ export default function AdminDashboard() {
                         Add a new product
                         <Plus className="h-4 w-4" />
                       </Button>
+                      <Button className="h-12 w-full justify-between rounded-2xl bg-slate-800 text-white hover:bg-slate-700" onClick={() => setActiveSection('promo-products')}>
+                        Manage promo products
+                        <TicketPercent className="h-4 w-4" />
+                      </Button>
                       <Button className="h-12 w-full justify-between rounded-2xl bg-slate-800 text-white hover:bg-slate-700" onClick={() => setActiveSection('orders')}>
                         Review all orders
                         <Package className="h-4 w-4" />
@@ -1374,6 +1381,10 @@ export default function AdminDashboard() {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {activeSection === 'promo-products' && (
+              <PromoProductsSection />
             )}
 
             {activeSection === 'products' && (

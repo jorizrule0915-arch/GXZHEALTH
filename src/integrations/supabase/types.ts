@@ -16,64 +16,151 @@ export type Database = {
     Tables: {
       orders: {
         Row: {
-          id: string
-          order_number: string
-          items: Json
-          total_items: number
-          total_price: number
-          payment_method: string | null
-          payment_reference_id: string | null
-          payer_account_name: string | null
-          payment_submitted_at: string | null
-          status: string
           created_at: string
-          customer_name: string | null
-          customer_email: string | null
-          customer_phone: string | null
           customer_address: string | null
           customer_city: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
           customer_state: string | null
           customer_zip: string | null
-        }
-        Insert: {
-          id?: string
-          order_number: string
+          id: string
           items: Json
+          order_number: string
+          payer_account_name: string | null
+          payment_method: string | null
+          payment_reference_id: string | null
+          payment_submitted_at: string | null
+          promo_code: string | null
+          promo_code_id: string | null
+          promo_discount_amount: number
+          promo_discount_percent: number | null
+          promo_product_id: string | null
+          status: string
           total_items: number
           total_price: number
-          payment_method?: string | null
-          payment_reference_id?: string | null
-          payer_account_name?: string | null
-          payment_submitted_at?: string | null
-          status?: string
+          updated_at: string | null
+        }
+        Insert: {
           created_at?: string
-          customer_name?: string | null
-          customer_email?: string | null
-          customer_phone?: string | null
           customer_address?: string | null
           customer_city?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           customer_state?: string | null
           customer_zip?: string | null
+          id?: string
+          items: Json
+          order_number: string
+          payer_account_name?: string | null
+          payment_method?: string | null
+          payment_reference_id?: string | null
+          payment_submitted_at?: string | null
+          promo_code?: string | null
+          promo_code_id?: string | null
+          promo_discount_amount?: number
+          promo_discount_percent?: number | null
+          promo_product_id?: string | null
+          status?: string
+          total_items: number
+          total_price: number
+          updated_at?: string | null
         }
         Update: {
-          id?: string
-          order_number?: string
-          items?: Json
-          total_items?: number
-          total_price?: number
-          payment_method?: string | null
-          payment_reference_id?: string | null
-          payer_account_name?: string | null
-          payment_submitted_at?: string | null
-          status?: string
           created_at?: string
-          customer_name?: string | null
-          customer_email?: string | null
-          customer_phone?: string | null
           customer_address?: string | null
           customer_city?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           customer_state?: string | null
           customer_zip?: string | null
+          id?: string
+          items?: Json
+          order_number?: string
+          payer_account_name?: string | null
+          payment_method?: string | null
+          payment_reference_id?: string | null
+          payment_submitted_at?: string | null
+          promo_code?: string | null
+          promo_code_id?: string | null
+          promo_discount_amount?: number
+          promo_discount_percent?: number | null
+          promo_product_id?: string | null
+          status?: string
+          total_items?: number
+          total_price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          discount_percent: number | null
+          expires_at: string | null
+          id: string
+          influencer_name: string
+          last_used_at: string | null
+          promo_product_id: string
+          total_revenue: number
+          total_uses: number
+          updated_at: string
+          usage_limit: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_percent?: number | null
+          expires_at?: string | null
+          id?: string
+          influencer_name: string
+          last_used_at?: string | null
+          promo_product_id: string
+          total_revenue?: number
+          total_uses?: number
+          updated_at?: string
+          usage_limit?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_percent?: number | null
+          expires_at?: string | null
+          id?: string
+          influencer_name?: string
+          last_used_at?: string | null
+          promo_product_id?: string
+          total_revenue?: number
+          total_uses?: number
+          updated_at?: string
+          usage_limit?: number | null
+        }
+        Relationships: []
+      }
+      promo_products: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sku: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sku?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sku?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -142,7 +229,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_promo_code: {
+        Args: {
+          cart_items?: Json
+          input_code: string
+        }
+        Returns: {
+          code: string | null
+          discount_percent: number | null
+          expires_at: string | null
+          influencer_name: string | null
+          message: string
+          promo_code_id: string | null
+          promo_product_id: string | null
+          promo_product_name: string | null
+          total_uses: number | null
+          usage_limit: number | null
+          valid: boolean
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

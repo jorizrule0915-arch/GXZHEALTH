@@ -107,6 +107,12 @@ Deno.serve(async (req: Request) => {
     const shippingCost = typeof orderData.shippingCost === 'number'
       ? orderData.shippingCost
       : Math.max(orderData.totalPrice - subtotal, 0)
+    const promoDiscount = typeof orderData.promoDiscountAmount === 'number'
+      ? Math.max(orderData.promoDiscountAmount, 0)
+      : 0
+    const promoCodeLabel = typeof orderData.promoCode === 'string'
+      ? orderData.promoCode.trim()
+      : ''
     const totalPrice = typeof orderData.totalPrice === 'number'
       ? orderData.totalPrice
       : subtotal + shippingCost
@@ -152,6 +158,14 @@ Deno.serve(async (req: Request) => {
           </table>
         </div>
         `
+      : ''
+    const promoSummaryRowHtml = promoDiscount > 0
+      ? `
+                      <tr>
+                        <td style="color: #059669; font-size: 14px; padding-bottom: 16px;">Promo discount${promoCodeLabel ? ` (${escapeHtml(promoCodeLabel)})` : ''}</td>
+                        <td style="color: #059669; font-size: 15px; font-weight: 700; text-align: right; padding-bottom: 16px;">- ${formatCurrency(promoDiscount)}</td>
+                      </tr>
+      `
       : ''
     const itemsListHtml = orderData.items.map((item: any) => 
       `<tr>
@@ -313,6 +327,7 @@ Deno.serve(async (req: Request) => {
                         <td style="color: #475569; font-size: 14px; padding-bottom: 16px;">Shipping fee</td>
                         <td style="color: #0f172a; font-size: 15px; font-weight: 700; text-align: right; padding-bottom: 16px;">${formatCurrency(shippingCost)}</td>
                       </tr>
+                      ${promoSummaryRowHtml}
                       <tr>
                         <td style="border-top: 1px solid #bfdbfe; padding-top: 18px; color: #1d4ed8; font-size: 18px; font-weight: 800;">Total amount</td>
                         <td style="border-top: 1px solid #bfdbfe; padding-top: 18px; color: #2563eb; font-size: 30px; font-weight: 900; text-align: right;">${formatCurrency(totalPrice)}</td>

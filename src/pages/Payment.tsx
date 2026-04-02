@@ -40,6 +40,11 @@ interface OrderData {
   totalItems: number;
   subtotal?: number;
   shippingCost?: number;
+  promoCode?: string | null;
+  promoProductName?: string | null;
+  promoInfluencerName?: string | null;
+  promoDiscountPercent?: number | null;
+  promoDiscountAmount?: number | null;
   totalPrice: number;
   orderNumber?: string;
   customer?: {
@@ -444,6 +449,7 @@ const Payment = () => {
   const shippingCost = typeof orderData?.shippingCost === 'number'
     ? orderData.shippingCost
     : Math.max((orderData?.totalPrice ?? 0) - subtotal, 0);
+  const promoDiscount = Math.max(orderData?.promoDiscountAmount ?? 0, 0);
   const customerLocation = [orderData?.customer?.city, orderData?.customer?.state, orderData?.customer?.zipCode]
     .filter(Boolean)
     .join(', ');
@@ -793,6 +799,14 @@ const Payment = () => {
                         <span className="text-muted-foreground">Shipping</span>
                         <span className="font-medium text-foreground">${shippingCost.toFixed(2)}</span>
                       </div>
+                      {promoDiscount > 0 && (
+                        <div className="flex items-center justify-between text-sm text-emerald-600">
+                          <span>
+                            Promo {orderData.promoCode ? `(${orderData.promoCode})` : ''}
+                          </span>
+                          <span className="font-medium">- ${promoDiscount.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between border-t border-dashed border-border pt-4">
                         <span className="text-sm font-semibold text-foreground">Total due</span>
                         <span className="text-xl font-bold text-primary">${orderData.totalPrice.toFixed(2)}</span>
@@ -807,6 +821,11 @@ const Payment = () => {
                         {orderData.customer?.phone && <p className="text-sm text-muted-foreground">{orderData.customer.phone}</p>}
                         {orderData.customer?.address && <p className="text-sm text-muted-foreground">{orderData.customer.address}</p>}
                         {customerLocation && <p className="text-sm text-muted-foreground">{customerLocation}</p>}
+                        {orderData.promoCode && (
+                          <p className="text-sm text-muted-foreground">
+                            Promo code: <span className="font-mono">{orderData.promoCode}</span>
+                          </p>
+                        )}
                       </div>
                     </div>
 
