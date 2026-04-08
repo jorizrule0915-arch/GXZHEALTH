@@ -205,8 +205,8 @@ BEGIN
 
   SELECT *
   INTO matched_code
-  FROM public.promo_codes
-  WHERE upper(code) = normalized_code;
+  FROM public.promo_codes AS pc
+  WHERE upper(pc.code) = normalized_code;
 
   IF NOT FOUND THEN
     RETURN QUERY SELECT
@@ -281,7 +281,14 @@ BEGIN
     SELECT EXISTS (
       SELECT 1
       FROM jsonb_array_elements(cart_items) AS item
-      WHERE lower(coalesce(item ->> 'name', '')) LIKE '%' || lower(matched_product.name) || '%'
+      WHERE
+        regexp_replace(lower(coalesce(item ->> 'name', '')), '[^a-z0-9]+', '', 'g')
+          LIKE '%' || regexp_replace(lower(coalesce(matched_product.name, '')), '[^a-z0-9]+', '', 'g') || '%'
+        OR (
+          matched_product.sku IS NOT NULL
+          AND regexp_replace(lower(coalesce(item ->> 'name', '')), '[^a-z0-9]+', '', 'g')
+            LIKE '%' || regexp_replace(lower(matched_product.sku), '[^a-z0-9]+', '', 'g') || '%'
+        )
     )
     INTO has_matching_item;
   END IF;

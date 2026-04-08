@@ -647,9 +647,10 @@ export default function AdminDashboard() {
   }, [handledActionKey, isAuthenticated, navigate, orders, searchParams]);
 
   const filteredOrders = useMemo(() => {
+    const committedOrders = orders.filter((order) => (order.payment_method ?? '').trim().length > 0);
     const query = search.trim().toLowerCase();
 
-    return orders.filter((order) => {
+    return committedOrders.filter((order) => {
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       if (!query) {
         return matchesStatus;
@@ -666,40 +667,47 @@ export default function AdminDashboard() {
     });
   }, [orders, search, statusFilter]);
 
+  const submittedOrders = useMemo(
+    () => orders.filter((order) => (order.payment_method ?? '').trim().length > 0),
+    [orders],
+  );
+
   const stats = useMemo(() => {
-    const monthOrders = orders.filter((order) => {
+    const monthOrders = submittedOrders.filter((order) => {
       const created = new Date(order.created_at);
       return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
     });
-    const todayOrders = orders.filter((order) => {
+    const todayOrders = submittedOrders.filter((order) => {
       const created = new Date(order.created_at);
       return created.toDateString() === now.toDateString();
     });
-    const completeOrders = orders.filter((order) => order.status === 'complete' || order.status === 'completed');
-    const pipelineOrders = orders.filter((order) =>
+    const completeOrders = submittedOrders.filter((order) => order.status === 'complete' || order.status === 'completed');
+    const pipelineOrders = submittedOrders.filter((order) =>
       ['Apple Pay', 'Zelle'].includes(order.payment_method ?? '') &&
       order.status !== 'complete' &&
       order.status !== 'completed'
     );
 
     return {
-      totalOrders: orders.length,
-      totalRevenue: orders.reduce((sum, order) => sum + Number(order.total_price), 0),
+      totalOrders: submittedOrders.length,
+      totalRevenue: submittedOrders.reduce((sum, order) => sum + Number(order.total_price), 0),
       monthRevenue: monthOrders.reduce((sum, order) => sum + Number(order.total_price), 0),
       todayRevenue: todayOrders.reduce((sum, order) => sum + Number(order.total_price), 0),
       monthOrders: monthOrders.length,
       todayOrders: todayOrders.length,
       completedOrders: completeOrders.length,
       pipelineOrders: pipelineOrders.length,
-      averageOrder: orders.length > 0 ? orders.reduce((sum, order) => sum + Number(order.total_price), 0) / orders.length : 0,
+      averageOrder: submittedOrders.length > 0
+        ? submittedOrders.reduce((sum, order) => sum + Number(order.total_price), 0) / submittedOrders.length
+        : 0,
     };
-  }, [now, orders]);
+  }, [now, submittedOrders]);
 
   const monthlySales = useMemo(() => {
     const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' });
     const bucket = new Map<string, { label: string; revenue: number; orders: number }>();
 
-    orders.forEach((order) => {
+    submittedOrders.forEach((order) => {
       const date = new Date(order.created_at);
       const key = `${date.getFullYear()}-${date.getMonth()}`;
       const current = bucket.get(key) ?? { label: formatter.format(date), revenue: 0, orders: 0 };
@@ -712,10 +720,10 @@ export default function AdminDashboard() {
       .sort(([left], [right]) => (left < right ? 1 : -1))
       .slice(0, 6)
       .map(([, value]) => value);
-  }, [orders]);
+  }, [submittedOrders]);
 
   const pipelineColumns = useMemo<PipelineColumn[]>(() => {
-    const appleAndZelleOrders = orders.filter((order) => ['Apple Pay', 'Zelle'].includes(order.payment_method ?? ''));
+    const appleAndZelleOrders = submittedOrders.filter((order) => ['Apple Pay', 'Zelle'].includes(order.payment_method ?? ''));
 
     return [
       {
@@ -740,7 +748,7 @@ export default function AdminDashboard() {
         empty: 'No confirmed Apple Pay / Zelle orders yet.',
       },
     ];
-  }, [orders]);
+  }, [submittedOrders]);
 
   const handlePipelineDragStart = (event: ReactDragEvent<HTMLDivElement>, orderId: string) => {
     event.dataTransfer.effectAllowed = 'move';
@@ -1376,7 +1384,7 @@ export default function AdminDashboard() {
 
                   {!loadingOrders && filteredOrders.length > 0 && (
                     <div className="border-t border-slate-800 px-6 py-3 text-xs text-slate-500">
-                      Showing {filteredOrders.length} of {orders.length} orders
+                      Showing {filteredOrders.length} of {submittedOrders.length} submitted orders
                     </div>
                   )}
                 </CardContent>
