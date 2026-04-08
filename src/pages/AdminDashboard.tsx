@@ -79,7 +79,7 @@ interface ProductFormState {
   options: ProductOptionForm[];
 }
 
-type AdminSection = 'overview' | 'sales' | 'pipeline' | 'orders' | 'products' | 'promo-products';
+type AdminSection = 'overview' | 'sales' | 'pipeline' | 'checkout-leads' | 'orders' | 'products' | 'promo-products';
 type DashboardOrder = Omit<OrderRow, 'items'> & { items: OrderItem[] };
 type PipelineColumnId = 'payment_contact_requested' | 'processing' | 'complete';
 type PipelineColumn = {
@@ -129,7 +129,8 @@ const sectionItems: Array<{ id: AdminSection; label: string; description: string
   { id: 'overview', label: 'Dashboard', description: 'Overall activity', icon: LayoutDashboard },
   { id: 'sales', label: 'Sales', description: 'Live revenue view', icon: BarChart3 },
   { id: 'pipeline', label: 'Pipeline', description: 'Apple Pay / Zelle', icon: Workflow },
-  { id: 'orders', label: 'Orders', description: 'All order records', icon: Package },
+  { id: 'checkout-leads', label: 'Checkout Leads', description: 'Stopped before payment', icon: Mail },
+  { id: 'orders', label: 'Orders', description: 'Submitted with payment', icon: Package },
   { id: 'products', label: 'Products', description: 'Add and manage', icon: Boxes },
   { id: 'promo-products', label: 'PROMO PRODUCTS', description: 'Influencer code tracking', icon: TicketPercent },
 ];
@@ -147,6 +148,10 @@ function isOrderItem(value: unknown): value is OrderItem {
     typeof candidate.quantity === 'number' &&
     typeof candidate.total === 'number'
   );
+}
+
+function hasSelectedPaymentMethod(order: Pick<OrderRow, 'payment_method'>) {
+  return (order.payment_method ?? '').trim().length > 0;
 }
 
 function parseOrderItems(value: unknown): OrderItem[] {
@@ -602,6 +607,29 @@ export default function AdminDashboard() {
     });
   };
 
+  const openLeadEmail = (order: DashboardOrder) => {
+    if (!order.customer_email) {
+      toast({
+        title: 'Missing buyer email',
+        description: 'This checkout lead does not have an email address to contact.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const subject = `Complete your GXZ Health order ${order.order_number}`;
+    const body = [
+      `Hi ${order.customer_name ?? 'there'},`,
+      '',
+      `We noticed you started checkout for order ${order.order_number} but did not finish choosing a payment method.`,
+      'If you still want to complete the order, reply to this email and we can help you continue.',
+      '',
+      'GXZ Health',
+    ].join('\n');
+
+    window.location.href = `mailto:${order.customer_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
   useEffect(() => {
     if (!isAuthenticated || orders.length === 0) {
       return;
@@ -646,11 +674,20 @@ export default function AdminDashboard() {
     })();
   }, [handledActionKey, isAuthenticated, navigate, orders, searchParams]);
 
+  const submittedOrders = useMemo(
+    () => orders.filter((order) => hasSelectedPaymentMethod(order)),
+    [orders],
+  );
+
+  const checkoutLeads = useMemo(
+    () => orders.filter((order) => !hasSelectedPaymentMethod(order)),
+    [orders],
+  );
+
   const filteredOrders = useMemo(() => {
-    const committedOrders = orders.filter((order) => (order.payment_method ?? '').trim().length > 0);
     const query = search.trim().toLowerCase();
 
-    return committedOrders.filter((order) => {
+    return submittedOrders.filter((order) => {
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       if (!query) {
         return matchesStatus;
@@ -665,12 +702,25 @@ export default function AdminDashboard() {
         (order.payer_account_name ?? '').toLowerCase().includes(query)
       );
     });
-  }, [orders, search, statusFilter]);
+  }, [submittedOrders, search, statusFilter]);
 
-  const submittedOrders = useMemo(
-    () => orders.filter((order) => (order.payment_method ?? '').trim().length > 0),
-    [orders],
-  );
+  const filteredCheckoutLeads = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return checkoutLeads.filter((order) => {
+      if (!query) {
+        return true;
+      }
+
+      return (
+        order.order_number.toLowerCase().includes(query) ||
+        (order.customer_name ?? '').toLowerCase().includes(query) ||
+        (order.customer_email ?? '').toLowerCase().includes(query) ||
+        (order.customer_phone ?? '').toLowerCase().includes(query) ||
+        (order.customer_address ?? '').toLowerCase().includes(query)
+      );
+    });
+  }, [checkoutLeads, search]);
 
   const stats = useMemo(() => {
     const monthOrders = submittedOrders.filter((order) => {
@@ -697,11 +747,12 @@ export default function AdminDashboard() {
       todayOrders: todayOrders.length,
       completedOrders: completeOrders.length,
       pipelineOrders: pipelineOrders.length,
+      checkoutLeads: checkoutLeads.length,
       averageOrder: submittedOrders.length > 0
         ? submittedOrders.reduce((sum, order) => sum + Number(order.total_price), 0) / submittedOrders.length
         : 0,
     };
-  }, [now, submittedOrders]);
+  }, [checkoutLeads.length, now, submittedOrders]);
 
   const monthlySales = useMemo(() => {
     const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' });
@@ -930,7 +981,7 @@ export default function AdminDashboard() {
               <div>
                 <h1 className="text-3xl font-bold text-white">Operations Dashboard</h1>
                 <p className="mt-1 text-sm text-slate-400">
-                  Track live sales, monitor Apple Pay and Zelle follow-ups, clean up old orders, and manage the product catalog from one place.
+                  Track submitted orders, monitor Apple Pay and Zelle follow-ups, review checkout leads, clean up old records, and manage the product catalog from one place.
                 </p>
               </div>
               <Badge className="w-fit border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-blue-200">
@@ -940,9 +991,10 @@ export default function AdminDashboard() {
 
             {activeSection === 'overview' && (
               <>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                   <MetricCard title="Total Revenue" value={formatCurrency(stats.totalRevenue)} sub="All time" gradient="bg-emerald-500" icon={<DollarSign className="h-5 w-5 text-emerald-300" />} />
                   <MetricCard title="This Month" value={formatCurrency(stats.monthRevenue)} sub={`${stats.monthOrders} orders`} gradient="bg-blue-500" icon={<TrendingUp className="h-5 w-5 text-blue-300" />} />
+                  <MetricCard title="Checkout Leads" value={stats.checkoutLeads} sub="Stopped before payment" gradient="bg-rose-500" icon={<Mail className="h-5 w-5 text-rose-300" />} />
                   <MetricCard title="Pipeline" value={stats.pipelineOrders} sub="Apple Pay / Zelle need attention" gradient="bg-violet-500" icon={<Workflow className="h-5 w-5 text-violet-300" />} />
                   <MetricCard title="Completed" value={stats.completedOrders} sub="Orders marked paid" gradient="bg-amber-500" icon={<CheckCheck className="h-5 w-5 text-amber-300" />} />
                 </div>
@@ -951,16 +1003,18 @@ export default function AdminDashboard() {
                   <Card className="border-slate-800 bg-slate-900/70">
                     <CardHeader>
                       <CardTitle className="text-white">Recent Orders</CardTitle>
-                      <CardDescription className="text-slate-400">Quick view of the latest customer activity.</CardDescription>
+                      <CardDescription className="text-slate-400">Latest orders where the buyer actually chose a payment method.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {loadingOrders ? (
                         <p className="text-sm text-slate-400">Loading recent orders…</p>
-                      ) : orders.slice(0, 5).map((order) => (
+                      ) : submittedOrders.length === 0 ? (
+                        <p className="text-sm text-slate-400">No submitted orders yet.</p>
+                      ) : submittedOrders.slice(0, 5).map((order) => (
                         <div key={order.id} className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="font-semibold text-white">{order.order_number}</p>
-                            <p className="text-sm text-slate-400">{order.customer_name ?? 'Unknown customer'} · {order.payment_method ?? 'No method'}</p>
+                            <p className="text-sm text-slate-400">{order.customer_name ?? 'Unknown customer'} · {order.payment_method}</p>
                           </div>
                           <div className="flex items-center gap-3">
                             <StatusBadge status={order.status} />
@@ -980,6 +1034,10 @@ export default function AdminDashboard() {
                       <Button className="h-12 w-full justify-between rounded-2xl bg-slate-800 text-white hover:bg-slate-700" onClick={() => setActiveSection('pipeline')}>
                         Apple Pay / Zelle pipeline
                         <Workflow className="h-4 w-4" />
+                      </Button>
+                      <Button className="h-12 w-full justify-between rounded-2xl bg-slate-800 text-white hover:bg-slate-700" onClick={() => setActiveSection('checkout-leads')}>
+                        Review checkout leads
+                        <Mail className="h-4 w-4" />
                       </Button>
                       <Button className="h-12 w-full justify-between rounded-2xl bg-slate-800 text-white hover:bg-slate-700" onClick={() => setActiveSection('products')}>
                         Add a new product
@@ -1167,14 +1225,174 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {activeSection === 'checkout-leads' && (
+              <Card className="overflow-hidden border-slate-800 bg-slate-900/70">
+                <CardHeader className="border-b border-slate-800">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <CardTitle className="text-white">Checkout Leads</CardTitle>
+                      <CardDescription className="text-slate-400">
+                        Buyers who started checkout but never chose a payment method. Use this list for follow-up emails and cleanup.
+                      </CardDescription>
+                    </div>
+
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                      <Input
+                        placeholder="Search checkout lead / customer…"
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        className="h-10 w-full border-slate-700 bg-slate-800/70 pl-9 text-white placeholder:text-slate-500 sm:w-72"
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4 p-6">
+                  {loadingOrders ? (
+                    <div className="flex items-center justify-center py-24 text-slate-500">
+                      <RefreshCw className="mr-3 h-6 w-6 animate-spin" />
+                      Loading checkout leads…
+                    </div>
+                  ) : filteredCheckoutLeads.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-24 text-slate-500">
+                      <Mail className="mb-3 h-12 w-12 opacity-30" />
+                      <p className="font-medium">No checkout leads found</p>
+                      <p className="mt-1 text-sm">Everyone here has either continued to payment or your search returned no results.</p>
+                    </div>
+                  ) : (
+                    filteredCheckoutLeads.map((order) => {
+                      const orderSubtotal = order.items.reduce((sum, item) => sum + Number(item.total ?? item.price * item.quantity), 0);
+                      const orderTotal = Number(order.total_price);
+                      const shippingCost = Math.max(orderTotal - orderSubtotal, 0);
+
+                      return (
+                        <div key={order.id} className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5">
+                          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <p className="font-mono text-sm font-semibold text-blue-300">{order.order_number}</p>
+                                <Badge className="border-rose-500/20 bg-rose-500/10 text-rose-200">Checkout only</Badge>
+                              </div>
+                              <p className="mt-2 text-lg font-semibold text-white">{order.customer_name ?? 'Unknown customer'}</p>
+                              <p className="mt-1 text-sm text-slate-400">
+                                Created {formatDate(order.created_at)} at {formatTime(order.created_at)}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                className="bg-blue-600 text-white hover:bg-blue-500"
+                                onClick={() => openLeadEmail(order)}
+                              >
+                                <Mail className="mr-1 h-4 w-4" />
+                                Email Buyer
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                                onClick={() => void deleteOrder(order.id)}
+                              >
+                                <Trash2 className="mr-1 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+                            <div className="space-y-4">
+                              <div>
+                                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Contact Info</p>
+                                <div className="space-y-2">
+                                  {order.customer_email && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                                      <Mail className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                                      {order.customer_email}
+                                    </div>
+                                  )}
+                                  {order.customer_phone && (
+                                    <div className="flex items-center gap-2 text-sm text-slate-300">
+                                      <Phone className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                                      {order.customer_phone}
+                                    </div>
+                                  )}
+                                  {order.customer_address && (
+                                    <div className="flex items-start gap-2 text-sm text-slate-300">
+                                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
+                                      <span>
+                                        {order.customer_address}
+                                        {order.customer_city && `, ${order.customer_city}`}
+                                        {order.customer_state && `, ${order.customer_state}`}
+                                        {order.customer_zip && ` ${order.customer_zip}`}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Lead Note</p>
+                                <p className="mt-2 text-sm leading-7 text-slate-300">
+                                  This buyer reached checkout but stopped before choosing a payment method. You can email them directly from this card and try to recover the sale.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Checkout Items</p>
+                              <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                                {order.items.map((item, index) => (
+                                  <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-4 text-sm">
+                                    <div className="text-slate-300">
+                                      <span className="mr-2 text-slate-500">×{item.quantity}</span>
+                                      {item.name}
+                                    </div>
+                                    <span className="shrink-0 font-semibold text-emerald-300">
+                                      {formatCurrency(Number(item.total ?? item.price * item.quantity))}
+                                    </span>
+                                  </div>
+                                ))}
+                                <div className="mt-3 border-t border-slate-800 pt-3 text-sm">
+                                  <div className="flex items-center justify-between text-slate-400">
+                                    <span>Subtotal</span>
+                                    <span>{formatCurrency(orderSubtotal)}</span>
+                                  </div>
+                                  <div className="mt-1 flex items-center justify-between text-slate-400">
+                                    <span>Shipping</span>
+                                    <span>{formatCurrency(shippingCost)}</span>
+                                  </div>
+                                  <div className="mt-2 flex items-center justify-between font-semibold text-white">
+                                    <span>Total</span>
+                                    <span>{formatCurrency(orderTotal)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+
+                  {!loadingOrders && filteredCheckoutLeads.length > 0 && (
+                    <div className="border-t border-slate-800 pt-4 text-xs text-slate-500">
+                      Showing {filteredCheckoutLeads.length} of {checkoutLeads.length} checkout leads
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {activeSection === 'orders' && (
               <Card className="overflow-hidden border-slate-800 bg-slate-900/70">
                 <CardHeader className="border-b border-slate-800">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                      <CardTitle className="text-white">Order Management</CardTitle>
+                      <CardTitle className="text-white">Submitted Orders</CardTitle>
                       <CardDescription className="text-slate-400">
-                        Review every order, move statuses, or remove records that are no longer needed.
+                        Review only the orders where the buyer already chose a payment method, move statuses, or remove records that are no longer needed.
                       </CardDescription>
                     </div>
 
@@ -1182,7 +1400,7 @@ export default function AdminDashboard() {
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                         <Input
-                          placeholder="Search order / customer…"
+                          placeholder="Search submitted order / customer…"
                           value={search}
                           onChange={(event) => setSearch(event.target.value)}
                           className="h-10 w-full border-slate-700 bg-slate-800/70 pl-9 text-white placeholder:text-slate-500 sm:w-64"
@@ -1215,8 +1433,8 @@ export default function AdminDashboard() {
                   ) : filteredOrders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 text-slate-500">
                       <Package className="mb-3 h-12 w-12 opacity-30" />
-                      <p className="font-medium">No orders found</p>
-                      <p className="mt-1 text-sm">Try adjusting your search or filter.</p>
+                      <p className="font-medium">No submitted orders found</p>
+                      <p className="mt-1 text-sm">Try adjusting your search or filter, or wait until buyers choose a payment method.</p>
                     </div>
                   ) : (
                     <Table>
