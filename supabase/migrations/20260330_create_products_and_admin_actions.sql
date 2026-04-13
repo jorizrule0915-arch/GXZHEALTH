@@ -134,9 +134,7 @@ VALUES
       {"label":"Light Blue","value":"light-blue","price":20,"type":"color","inStock":true},
       {"label":"Pink","value":"pink","price":20,"type":"color","inStock":true},
       {"label":"Red","value":"red","price":20,"type":"color","inStock":true},
-      {"label":"Silver","value":"silver","price":20,"type":"color","inStock":true},
-      {"label":"4mm","value":"4mm","type":"size","inStock":true},
-      {"label":"8mm","value":"8mm","type":"size","inStock":true}
+      {"label":"Silver","value":"silver","price":20,"type":"color","inStock":true}
     ]'::jsonb,
     3
   ),
@@ -149,7 +147,7 @@ VALUES
     8.00,
     '["Ultra-fine micro-tip","100 per box","Clean sterile finish"]'::jsonb,
     '["Works with GXZ pens","Designed for controlled use","Compact, easy-to-store packaging"]'::jsonb,
-    '[{"label":"Standard Micro-Tip (32g x 4mm)","value":"32g-4mm","price":8},{"label":"Standard Micro-Tip (31g x 8mm)","value":"31g-8mm","price":8}]'::jsonb,
+    '[{"label":"4mm","value":"4mm","type":"size","inStock":true},{"label":"8mm","value":"8mm","type":"size","inStock":true}]'::jsonb,
     4
   ),
   (

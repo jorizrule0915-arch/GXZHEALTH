@@ -62,12 +62,10 @@ const penColorOptions: ProductOption[] = [
   { label: 'Silver', value: 'silver', price: 20, type: 'color', inStock: true },
 ];
 
-const penSizeOptions: ProductOption[] = [
+const needleSizeOptions: ProductOption[] = [
   { label: '4mm', value: '4mm', type: 'size', inStock: true },
   { label: '8mm', value: '8mm', type: 'size', inStock: true },
 ];
-
-const penDefaultOptions = [...penColorOptions, ...penSizeOptions];
 
 const placeholderGallery = (...images: string[]) => {
   return images.length ? images : [];
@@ -145,7 +143,7 @@ const builtInSeeds: BuiltInSeed[] = [
     category: 'Pen',
     features: ['Metal construction', 'Adjustable dial', 'Reusable design'],
     highlights: ['Premium metal finish', 'Smooth dose control', 'Designed for long-term use'],
-    options: penDefaultOptions,
+    options: penColorOptions,
     inStock: true,
     isActive: true,
     sortOrder: 3,
@@ -160,10 +158,7 @@ const builtInSeeds: BuiltInSeed[] = [
     category: 'Needle',
     features: ['Ultra-fine micro-tip', '100 per box', 'Clean sterile finish'],
     highlights: ['Works with GXZ pens', 'Designed for controlled use', 'Compact, easy-to-store packaging'],
-    options: [
-      { label: 'Standard Micro-Tip (32g x 4mm)', value: '32g-4mm', price: 8 },
-      { label: 'Standard Micro-Tip (31g x 8mm)', value: '31g-8mm', price: 8 },
-    ],
+    options: needleSizeOptions,
     inStock: true,
     isActive: true,
     sortOrder: 4,
@@ -245,10 +240,14 @@ function optionArrayFromJson(value: Json | null | undefined) {
 }
 
 function normalizePenOptions(options: ProductOption[]) {
-  const optionsByValue = new Map(penDefaultOptions.map((option) => [option.value, option]));
+  const optionsByValue = new Map(penColorOptions.map((option) => [option.value, option]));
   const customOptions: ProductOption[] = [];
 
   options.forEach((option) => {
+    if (option.type === 'size' || ['4mm', '8mm', '32g-4mm', '31g-8mm'].includes(option.value)) {
+      return;
+    }
+
     const aliasValue = option.value === 'matte-black'
       ? 'black'
       : option.value === 'rose-gold'
@@ -272,8 +271,38 @@ function normalizePenOptions(options: ProductOption[]) {
     });
   });
 
-  return [...penDefaultOptions.map((option) => optionsByValue.get(option.value) ?? option), ...customOptions]
+  return [...penColorOptions.map((option) => optionsByValue.get(option.value) ?? option), ...customOptions]
     .filter((option, index, list) => list.findIndex((entry) => entry.value === option.value) === index);
+}
+
+function normalizeNeedleOptions(options: ProductOption[]) {
+  const optionsByValue = new Map(needleSizeOptions.map((option) => [option.value, option]));
+  const legacyAliases: Record<string, string> = {
+    '32g-4mm': '4mm',
+    '31g-8mm': '8mm',
+  };
+
+  options.forEach((option) => {
+    const normalizedValue = legacyAliases[option.value] ?? option.value;
+    const defaultOption = optionsByValue.get(normalizedValue);
+
+    if (!defaultOption) {
+      optionsByValue.set(option.value, {
+        ...option,
+        type: option.type ?? 'general',
+        inStock: option.inStock ?? true,
+      });
+      return;
+    }
+
+    optionsByValue.set(normalizedValue, {
+      ...defaultOption,
+      ...(option.price !== undefined ? { price: option.price } : {}),
+      ...(option.inStock !== undefined ? { inStock: option.inStock } : {}),
+    });
+  });
+
+  return needleSizeOptions.map((option) => optionsByValue.get(option.value) ?? option);
 }
 
 function galleryFromRecord(record: Pick<ProductRecord, 'slug' | 'image_url' | 'gallery'>) {
@@ -311,6 +340,8 @@ export function normalizeCatalogProduct(record: ProductRecord): CatalogProduct {
   const options = optionArrayFromJson(record.options);
   const normalizedOptions = record.slug === 'pen'
     ? normalizePenOptions(options)
+    : record.slug === 'needles'
+      ? normalizeNeedleOptions(options)
     : options.length > 0
       ? options
       : builtIn?.options ?? [];
