@@ -23,6 +23,8 @@ export interface ProductOption {
   label: string;
   value: string;
   price?: number;
+  type?: 'general' | 'color' | 'size';
+  inStock?: boolean;
 }
 
 export interface CatalogProduct {
@@ -49,16 +51,23 @@ export type ProductRecord = Tables<'products'>;
 type BuiltInSeed = Omit<CatalogProduct, 'id' | 'image' | 'gallery' | 'imageUrl'>;
 
 const penColorOptions: ProductOption[] = [
-  { label: 'Blue', value: 'blue', price: 20 },
-  { label: 'Black', value: 'black', price: 20 },
-  { label: 'Dark Gray', value: 'dark-gray', price: 20 },
-  { label: 'Gold', value: 'gold', price: 20 },
-  { label: 'Gray', value: 'gray', price: 20 },
-  { label: 'Light Blue', value: 'light-blue', price: 20 },
-  { label: 'Pink', value: 'pink', price: 20 },
-  { label: 'Red', value: 'red', price: 20 },
-  { label: 'Silver', value: 'silver', price: 20 },
+  { label: 'Blue', value: 'blue', price: 20, type: 'color', inStock: true },
+  { label: 'Black', value: 'black', price: 20, type: 'color', inStock: true },
+  { label: 'Dark Gray', value: 'dark-gray', price: 20, type: 'color', inStock: true },
+  { label: 'Gold', value: 'gold', price: 20, type: 'color', inStock: true },
+  { label: 'Gray', value: 'gray', price: 20, type: 'color', inStock: true },
+  { label: 'Light Blue', value: 'light-blue', price: 20, type: 'color', inStock: true },
+  { label: 'Pink', value: 'pink', price: 20, type: 'color', inStock: true },
+  { label: 'Red', value: 'red', price: 20, type: 'color', inStock: true },
+  { label: 'Silver', value: 'silver', price: 20, type: 'color', inStock: true },
 ];
+
+const penSizeOptions: ProductOption[] = [
+  { label: '4mm', value: '4mm', type: 'size', inStock: true },
+  { label: '8mm', value: '8mm', type: 'size', inStock: true },
+];
+
+const penDefaultOptions = [...penColorOptions, ...penSizeOptions];
 
 const placeholderGallery = (...images: string[]) => {
   return images.length ? images : [];
@@ -136,7 +145,7 @@ const builtInSeeds: BuiltInSeed[] = [
     category: 'Pen',
     features: ['Metal construction', 'Adjustable dial', 'Reusable design'],
     highlights: ['Premium metal finish', 'Smooth dose control', 'Designed for long-term use'],
-    options: penColorOptions,
+    options: penDefaultOptions,
     inStock: true,
     isActive: true,
     sortOrder: 3,
@@ -216,6 +225,10 @@ function optionArrayFromJson(value: Json | null | undefined) {
     const label = typeof entry.label === 'string' ? entry.label.trim() : '';
     const rawValue = typeof entry.value === 'string' ? entry.value.trim() : '';
     const rawPrice = typeof entry.price === 'number' ? entry.price : undefined;
+    const rawType = typeof entry.type === 'string' && ['color', 'size', 'general'].includes(entry.type)
+      ? entry.type as ProductOption['type']
+      : undefined;
+    const rawInStock = typeof entry.inStock === 'boolean' ? entry.inStock : undefined;
 
     if (!label) {
       return [];
@@ -225,8 +238,42 @@ function optionArrayFromJson(value: Json | null | undefined) {
       label,
       value: rawValue || slugify(label),
       ...(typeof rawPrice === 'number' ? { price: rawPrice } : {}),
+      ...(rawType ? { type: rawType } : {}),
+      ...(typeof rawInStock === 'boolean' ? { inStock: rawInStock } : {}),
     }];
   });
+}
+
+function normalizePenOptions(options: ProductOption[]) {
+  const optionsByValue = new Map(penDefaultOptions.map((option) => [option.value, option]));
+  const customOptions: ProductOption[] = [];
+
+  options.forEach((option) => {
+    const aliasValue = option.value === 'matte-black'
+      ? 'black'
+      : option.value === 'rose-gold'
+        ? 'gold'
+        : option.value;
+    const defaultOption = optionsByValue.get(aliasValue);
+
+    if (defaultOption) {
+      optionsByValue.set(aliasValue, {
+        ...defaultOption,
+        ...(option.price !== undefined ? { price: option.price } : {}),
+        ...(option.inStock !== undefined ? { inStock: option.inStock } : {}),
+      });
+      return;
+    }
+
+    customOptions.push({
+      ...option,
+      type: option.type ?? 'general',
+      inStock: option.inStock ?? true,
+    });
+  });
+
+  return [...penDefaultOptions.map((option) => optionsByValue.get(option.value) ?? option), ...customOptions]
+    .filter((option, index, list) => list.findIndex((entry) => entry.value === option.value) === index);
 }
 
 function galleryFromRecord(record: Pick<ProductRecord, 'slug' | 'image_url' | 'gallery'>) {
@@ -262,8 +309,8 @@ export function normalizeCatalogProduct(record: ProductRecord): CatalogProduct {
   const builtIn = builtInSeedBySlug(record.slug);
   const builtInVisuals = builtInMedia[record.slug];
   const options = optionArrayFromJson(record.options);
-  const normalizedOptions = record.slug === 'pen' && options.length < penColorOptions.length
-    ? penColorOptions
+  const normalizedOptions = record.slug === 'pen'
+    ? normalizePenOptions(options)
     : options.length > 0
       ? options
       : builtIn?.options ?? [];

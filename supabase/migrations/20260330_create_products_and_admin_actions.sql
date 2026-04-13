@@ -125,7 +125,19 @@ VALUES
     20.00,
     '["Metal construction","Adjustable dial","Reusable design"]'::jsonb,
     '["Premium metal finish","Smooth dose control","Designed for long-term use"]'::jsonb,
-    '[{"label":"Matte Black","value":"matte-black","price":20},{"label":"Silver","value":"silver","price":20},{"label":"Rose Gold","value":"rose-gold","price":20}]'::jsonb,
+    '[
+      {"label":"Blue","value":"blue","price":20,"type":"color","inStock":true},
+      {"label":"Black","value":"black","price":20,"type":"color","inStock":true},
+      {"label":"Dark Gray","value":"dark-gray","price":20,"type":"color","inStock":true},
+      {"label":"Gold","value":"gold","price":20,"type":"color","inStock":true},
+      {"label":"Gray","value":"gray","price":20,"type":"color","inStock":true},
+      {"label":"Light Blue","value":"light-blue","price":20,"type":"color","inStock":true},
+      {"label":"Pink","value":"pink","price":20,"type":"color","inStock":true},
+      {"label":"Red","value":"red","price":20,"type":"color","inStock":true},
+      {"label":"Silver","value":"silver","price":20,"type":"color","inStock":true},
+      {"label":"4mm","value":"4mm","type":"size","inStock":true},
+      {"label":"8mm","value":"8mm","type":"size","inStock":true}
+    ]'::jsonb,
     3
   ),
   (

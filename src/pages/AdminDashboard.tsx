@@ -59,6 +59,8 @@ interface ProductOptionForm {
   label: string;
   value: string;
   price: string;
+  type: 'general' | 'color' | 'size';
+  inStock: boolean;
 }
 
 interface ProductFormState {
@@ -170,26 +172,6 @@ function parseStringArray(value: Json | null | undefined) {
   return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
 }
 
-function parseOptionRows(value: Json | null | undefined): ProductOptionForm[] {
-  if (!Array.isArray(value)) {
-    return [{ label: '', value: '', price: '' }];
-  }
-
-  const rows = value.flatMap((entry) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-      return [];
-    }
-
-    const label = typeof entry.label === 'string' ? entry.label : '';
-    const rowValue = typeof entry.value === 'string' ? entry.value : '';
-    const price = typeof entry.price === 'number' ? String(entry.price) : '';
-
-    return [{ label, value: rowValue, price }];
-  });
-
-  return rows.length > 0 ? rows : [{ label: '', value: '', price: '' }];
-}
-
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 }
@@ -224,11 +206,13 @@ function emptyProductForm(): ProductFormState {
     sortOrder: '',
     inStock: true,
     isActive: true,
-    options: [{ label: '', value: '', price: '' }],
+    options: [{ label: '', value: '', price: '', type: 'general', inStock: true }],
   };
 }
 
 function productToForm(product: ProductRow): ProductFormState {
+  const normalizedProduct = normalizeCatalogProduct(product);
+
   return {
     id: product.id,
     slug: product.slug,
@@ -244,7 +228,13 @@ function productToForm(product: ProductRow): ProductFormState {
     sortOrder: String(product.sort_order ?? 0),
     inStock: product.in_stock,
     isActive: product.is_active,
-    options: parseOptionRows(product.options),
+    options: normalizedProduct.options.map((option) => ({
+      label: option.label,
+      value: option.value,
+      price: option.price !== undefined ? String(option.price) : '',
+      type: option.type ?? 'general',
+      inStock: option.inStock ?? true,
+    })),
   };
 }
 
@@ -485,11 +475,11 @@ export default function AdminDashboard() {
   const addOptionRow = () => {
     setProductForm((current) => ({
       ...current,
-      options: [...current.options, { label: '', value: '', price: '' }],
+      options: [...current.options, { label: '', value: '', price: '', type: 'general', inStock: true }],
     }));
   };
 
-  const updateOptionRow = (index: number, key: keyof ProductOptionForm, value: string) => {
+  const updateOptionRow = <Key extends keyof ProductOptionForm>(index: number, key: Key, value: ProductOptionForm[Key]) => {
     setProductForm((current) => ({
       ...current,
       options: current.options.map((option, optionIndex) => (
@@ -502,7 +492,7 @@ export default function AdminDashboard() {
     setProductForm((current) => ({
       ...current,
       options: current.options.length === 1
-        ? [{ label: '', value: '', price: '' }]
+        ? [{ label: '', value: '', price: '', type: 'general', inStock: true }]
         : current.options.filter((_, optionIndex) => optionIndex !== index),
     }));
   };
@@ -524,6 +514,8 @@ export default function AdminDashboard() {
       .map((option) => ({
         label: option.label.trim(),
         value: option.value.trim() || slugify(option.label),
+        type: option.type,
+        inStock: option.inStock,
         ...(option.price.trim() ? { price: Number(option.price) } : {}),
       }));
 
@@ -1679,10 +1671,32 @@ export default function AdminDashboard() {
                       </div>
                       {productForm.options.map((option, index) => (
                         <div key={`${option.value}-${index}`} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-                          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_110px_auto]">
+                          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_110px]">
                             <Input placeholder="Label" value={option.label} onChange={(event) => updateOptionRow(index, 'label', event.target.value)} className="border-slate-700 bg-slate-800/70 text-white" />
                             <Input placeholder="Value" value={option.value} onChange={(event) => updateOptionRow(index, 'value', event.target.value)} className="border-slate-700 bg-slate-800/70 text-white" />
                             <Input placeholder="Price" value={option.price} onChange={(event) => updateOptionRow(index, 'price', event.target.value)} className="border-slate-700 bg-slate-800/70 text-white" />
+                          </div>
+                          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="grid gap-2 sm:w-40">
+                              <Label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Option Type</Label>
+                              <Select value={option.type} onValueChange={(value) => updateOptionRow(index, 'type', value as ProductOptionForm['type'])}>
+                                <SelectTrigger className="h-10 border-slate-700 bg-slate-800/70 text-white">
+                                  <SelectValue placeholder="Type" />
+                                </SelectTrigger>
+                                <SelectContent className="border-slate-700 bg-slate-900 text-white">
+                                  <SelectItem value="general">General</SelectItem>
+                                  <SelectItem value="color">Color</SelectItem>
+                                  <SelectItem value="size">Size</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 sm:min-w-40">
+                              <div>
+                                <p className="text-sm font-medium text-white">Option stock</p>
+                                <p className="text-xs text-slate-500">{option.inStock ? 'In stock' : 'Out of stock'}</p>
+                              </div>
+                              <Switch checked={option.inStock} onCheckedChange={(checked) => updateOptionRow(index, 'inStock', checked)} />
+                            </div>
                             <Button type="button" size="icon" variant="ghost" className="text-red-300 hover:bg-red-500/10 hover:text-red-200" onClick={() => removeOptionRow(index)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>

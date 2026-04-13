@@ -18,6 +18,8 @@ interface ProductOption {
   value: string;
   label: string;
   price?: number;
+  type?: 'general' | 'color' | 'size';
+  inStock?: boolean;
 }
 
 interface ProductDetail {
@@ -49,6 +51,14 @@ interface GalleryImage {
 
 const imageLabelOverrides: Record<string, { label: string; optionValue?: string }> = {
   'reusable-pen.png': { label: 'Blue', optionValue: 'blue' },
+  'reusable-pen-black.png': { label: 'Black', optionValue: 'black' },
+  'reusable-pen-darkgray.png': { label: 'Dark Gray', optionValue: 'dark-gray' },
+  'reusable-pen-gold.png': { label: 'Gold', optionValue: 'gold' },
+  'reusable-pen-gray.png': { label: 'Gray', optionValue: 'gray' },
+  'reusable-pen-lightblue.png': { label: 'Light Blue', optionValue: 'light-blue' },
+  'reusable-pen-pink.png': { label: 'Pink', optionValue: 'pink' },
+  'reusable-pen-red.png': { label: 'Red', optionValue: 'red' },
+  'reusable-pen-silver.png': { label: 'Silver', optionValue: 'silver' },
   'reusable-pen-black.jpeg': { label: 'Black', optionValue: 'black' },
   'reusable-pen-darkgray.jpeg': { label: 'Dark Gray', optionValue: 'dark-gray' },
   'reusable-pen-gold.jpeg': { label: 'Gold', optionValue: 'gold' },
@@ -195,6 +205,14 @@ function inferGalleryImages(images: string[], options: ProductOption[] | undefin
   });
 }
 
+function isOptionAvailable(option: ProductOption | undefined) {
+  return option?.inStock !== false;
+}
+
+function firstAvailableOption(options: ProductOption[]) {
+  return options.find(isOptionAvailable) ?? options[0];
+}
+
 // ─── Image Carousel ───────────────────────────────────────────────────────────
 
 function ImageCarousel({
@@ -295,11 +313,19 @@ function ImageCarousel({
 
 export default function ProductDetailModal({ product, isOpen, onClose, onAddToCart }: ProductDetailModalProps) {
   const [selectedOption, setSelectedOption] = useState<string>('');
+  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
     if (product?.options?.length) {
-      setSelectedOption(product.options[0].value);
+      const colorOptions = product.options.filter((option) => option.type === 'color');
+      const sizeOptions = product.options.filter((option) => option.type === 'size');
+      const generalOptions = product.options.filter((option) => !option.type || option.type === 'general');
+
+      setSelectedColor(firstAvailableOption(colorOptions)?.value ?? '');
+      setSelectedSize(firstAvailableOption(sizeOptions)?.value ?? '');
+      setSelectedOption(firstAvailableOption(generalOptions)?.value ?? '');
     }
     setAdded(false);
   }, [product]);
@@ -313,21 +339,93 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
 
   if (!product) return null;
 
-  const selectedOpt = product.options?.find(o => o.value === selectedOption);
-  const displayPrice = selectedOpt?.price ?? product.price;
+  const colorOptions = product.options?.filter((option) => option.type === 'color') ?? [];
+  const sizeOptions = product.options?.filter((option) => option.type === 'size') ?? [];
+  const generalOptions = product.options?.filter((option) => !option.type || option.type === 'general') ?? [];
+  const hasGroupedOptions = colorOptions.length > 0 || sizeOptions.length > 0;
+  const selectedColorOption = colorOptions.find((option) => option.value === selectedColor);
+  const selectedSizeOption = sizeOptions.find((option) => option.value === selectedSize);
+  const selectedGeneralOption = generalOptions.find((option) => option.value === selectedOption);
+  const selectedCartOptions = hasGroupedOptions
+    ? [selectedColorOption, selectedSizeOption].filter((option): option is ProductOption => Boolean(option))
+    : selectedGeneralOption
+      ? [selectedGeneralOption]
+      : [];
+  const displayPrice = selectedColorOption?.price ?? selectedSizeOption?.price ?? selectedGeneralOption?.price ?? product.price;
+  const selectedVariantInStock = selectedCartOptions.every(isOptionAvailable);
+  const canAddToCart = product.inStock && selectedVariantInStock;
   const allGalleryImages = inferGalleryImages(product.images, product.options, product.name);
-  const matchingGalleryImages = selectedOption
-    ? allGalleryImages.filter((image) => image.optionValue === selectedOption)
+  const selectedImageOption = selectedColorOption?.value ?? selectedGeneralOption?.value ?? selectedOption;
+  const matchingGalleryImages = selectedImageOption
+    ? allGalleryImages.filter((image) => image.optionValue === selectedImageOption)
     : [];
   const visibleGalleryImages = matchingGalleryImages.length > 0
-    ? [...matchingGalleryImages, ...allGalleryImages.filter((image) => image.optionValue !== selectedOption)]
+    ? [...matchingGalleryImages, ...allGalleryImages.filter((image) => image.optionValue !== selectedImageOption)]
     : allGalleryImages;
   const prefersContainedImage = product.category.toLowerCase() === 'pen' || product.name.toLowerCase().includes('pen');
 
   const handleAdd = () => {
-    onAddToCart(product.id, selectedOpt, visibleGalleryImages[0]?.src ?? product.images[0]);
+    const selectedCartOption = selectedCartOptions.length > 0
+      ? {
+        value: selectedCartOptions.map((option) => option.value).join('-'),
+        label: selectedCartOptions.map((option) => option.label).join(' / '),
+        price: displayPrice,
+      }
+      : undefined;
+
+    onAddToCart(product.id, selectedCartOption, visibleGalleryImages[0]?.src ?? product.images[0]);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const renderOptionGroup = (
+    title: string,
+    value: string,
+    onChange: (value: string) => void,
+    options: ProductOption[],
+  ) => {
+    if (options.length === 0) {
+      return null;
+    }
+
+    return (
+      <div>
+        <Label className="mb-3 block text-sm font-semibold text-foreground">
+          {title}
+        </Label>
+        <RadioGroup value={value} onValueChange={onChange} className="gap-2">
+          {options.map((opt) => {
+            const disabled = !isOptionAvailable(opt);
+            const selected = value === opt.value;
+
+            return (
+              <div
+                key={opt.value}
+                onClick={() => !disabled && onChange(opt.value)}
+                className={`flex items-center justify-between rounded-xl border p-3 transition-all ${
+                  disabled
+                    ? 'cursor-not-allowed border-border bg-muted/50 opacity-60'
+                    : selected
+                      ? 'cursor-pointer border-secondary bg-secondary/5 shadow-sm'
+                      : 'cursor-pointer border-border hover:border-muted-foreground'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <RadioGroupItem value={opt.value} id={`${title}-${opt.value}`} disabled={disabled} />
+                  <Label htmlFor={`${title}-${opt.value}`} className="cursor-pointer text-sm font-medium">
+                    {opt.label}
+                    {disabled && <span className="ml-2 text-xs font-semibold text-red-500">Out of stock</span>}
+                  </Label>
+                </div>
+                {opt.price && (
+                  <span className="text-sm font-bold text-secondary">${opt.price.toFixed(2)}</span>
+                )}
+              </div>
+            );
+          })}
+        </RadioGroup>
+      </div>
+    );
   };
 
   return (
@@ -395,15 +493,17 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
                         <span className="font-display text-4xl font-bold text-foreground">
                           ${displayPrice.toFixed(2)}
                         </span>
-                        {selectedOpt?.price && selectedOpt.price !== product.price && (
+                        {displayPrice !== product.price && (
                           <span className="text-muted-foreground text-sm line-through">
                             ${product.price.toFixed(2)}
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {product.inStock ? (
+                        {canAddToCart ? (
                           <span className="text-green-600 font-medium">✓ In Stock</span>
+                        ) : product.inStock ? (
+                          <span className="text-red-500 font-medium">Selected option out of stock</span>
                         ) : (
                           <span className="text-red-500 font-medium">Out of Stock</span>
                         )}
@@ -417,33 +517,16 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
 
                     {/* Options (size/flavor/etc.) */}
                     {product.options && product.options.length > 0 && (
-                      <div>
-                        <Label className="text-sm font-semibold mb-3 block text-foreground">
-                          Choose option:
-                        </Label>
-                        <RadioGroup value={selectedOption} onValueChange={setSelectedOption} className="gap-2">
-                          {product.options.map((opt) => (
-                            <div
-                              key={opt.value}
-                              onClick={() => setSelectedOption(opt.value)}
-                              className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                                selectedOption === opt.value
-                                  ? 'border-secondary bg-secondary/5 shadow-sm'
-                                  : 'border-border hover:border-muted-foreground'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <RadioGroupItem value={opt.value} id={opt.value} />
-                                <Label htmlFor={opt.value} className="cursor-pointer font-medium text-sm">
-                                  {opt.label}
-                                </Label>
-                              </div>
-                              {opt.price && (
-                                <span className="text-secondary font-bold text-sm">${opt.price.toFixed(2)}</span>
-                              )}
-                            </div>
-                          ))}
-                        </RadioGroup>
+                      <div className="space-y-4">
+                        {hasGroupedOptions ? (
+                          <>
+                            {renderOptionGroup('Choose color:', selectedColor, setSelectedColor, colorOptions)}
+                            {renderOptionGroup('Choose size:', selectedSize, setSelectedSize, sizeOptions)}
+                            {renderOptionGroup('Choose option:', selectedOption, setSelectedOption, generalOptions)}
+                          </>
+                        ) : (
+                          renderOptionGroup('Choose option:', selectedOption, setSelectedOption, generalOptions)
+                        )}
                       </div>
                     )}
 
@@ -452,7 +535,7 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
                       variant="buy"
                       size="lg"
                       onClick={handleAdd}
-                      disabled={!product.inStock}
+                      disabled={!canAddToCart}
                       className="w-full transition-all"
                     >
                       {added ? (
