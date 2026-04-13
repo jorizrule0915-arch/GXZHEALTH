@@ -63,8 +63,8 @@ const penColorOptions: ProductOption[] = [
 ];
 
 const needleSizeOptions: ProductOption[] = [
-  { label: '4mm', value: '4mm', type: 'size', inStock: true },
-  { label: '8mm', value: '8mm', type: 'size', inStock: true },
+  { label: '32g x 4mm $8 Box of 100', value: '4mm', price: 8, type: 'size', inStock: true },
+  { label: '31g x 8mm $8 Box of 100', value: '8mm', price: 8, type: 'size', inStock: true },
 ];
 
 const placeholderGallery = (...images: string[]) => {

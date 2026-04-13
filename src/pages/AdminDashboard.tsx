@@ -1672,9 +1672,33 @@ export default function AdminDashboard() {
                       {productForm.options.map((option, index) => (
                         <div key={`${option.value}-${index}`} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
                           <div className="grid gap-3 sm:grid-cols-[1fr_1fr_110px]">
-                            <Input placeholder="Label" value={option.label} onChange={(event) => updateOptionRow(index, 'label', event.target.value)} className="border-slate-700 bg-slate-800/70 text-white" />
-                            <Input placeholder="Value" value={option.value} onChange={(event) => updateOptionRow(index, 'value', event.target.value)} className="border-slate-700 bg-slate-800/70 text-white" />
-                            <Input placeholder="Price" value={option.price} onChange={(event) => updateOptionRow(index, 'price', event.target.value)} className="border-slate-700 bg-slate-800/70 text-white" />
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Display Label</Label>
+                              <Input
+                                placeholder="32g x 4mm $8 Box of 100"
+                                value={option.label}
+                                onChange={(event) => updateOptionRow(index, 'label', event.target.value)}
+                                className="border-slate-700 bg-slate-800/70 text-white placeholder:text-slate-500"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Short Value</Label>
+                              <Input
+                                placeholder="4mm"
+                                value={option.value}
+                                onChange={(event) => updateOptionRow(index, 'value', event.target.value)}
+                                className="border-slate-700 bg-slate-800/70 text-white placeholder:text-slate-500"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Price</Label>
+                              <Input
+                                placeholder="8"
+                                value={option.price}
+                                onChange={(event) => updateOptionRow(index, 'price', event.target.value)}
+                                className="border-slate-700 bg-slate-800/70 text-white placeholder:text-slate-500"
+                              />
+                            </div>
                           </div>
                           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="grid gap-2 sm:w-40">

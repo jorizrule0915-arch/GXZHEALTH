@@ -147,7 +147,7 @@ VALUES
     8.00,
     '["Ultra-fine micro-tip","100 per box","Clean sterile finish"]'::jsonb,
     '["Works with GXZ pens","Designed for controlled use","Compact, easy-to-store packaging"]'::jsonb,
-    '[{"label":"4mm","value":"4mm","type":"size","inStock":true},{"label":"8mm","value":"8mm","type":"size","inStock":true}]'::jsonb,
+    '[{"label":"32g x 4mm $8 Box of 100","value":"4mm","price":8,"type":"size","inStock":true},{"label":"31g x 8mm $8 Box of 100","value":"8mm","price":8,"type":"size","inStock":true}]'::jsonb,
     4
   ),
   (

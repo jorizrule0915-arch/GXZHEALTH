@@ -417,7 +417,7 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
                     {disabled && <span className="ml-2 text-xs font-semibold text-red-500">Out of stock</span>}
                   </Label>
                 </div>
-                {opt.price && (
+                {opt.price && !opt.label.includes('$') && (
                   <span className="text-sm font-bold text-secondary">${opt.price.toFixed(2)}</span>
                 )}
               </div>
