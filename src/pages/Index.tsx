@@ -4,6 +4,7 @@ import { ArrowRight, Shield, Truck, Award, Beaker, Syringe, CircleDot, Package, 
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import Testimonials from '@/components/Testimonials';
 import heroBg from '@/assets/hero-bg.png';
 import productcreatine from '@/assets/products/Creatine.jpg';
 
@@ -300,6 +301,8 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      <Testimonials />
 
       {/* CTA Section */}
       <section className="py-24 bg-gradient-to-br from-primary via-navy-800 to-navy-900 relative overflow-hidden">
