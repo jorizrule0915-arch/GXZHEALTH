@@ -104,6 +104,7 @@ export type Database = {
           id: string
           influencer_name: string
           last_used_at: string | null
+          minimum_order_requirement: number
           promo_product_id: string
           total_revenue: number
           total_uses: number
@@ -118,6 +119,7 @@ export type Database = {
           id?: string
           influencer_name: string
           last_used_at?: string | null
+          minimum_order_requirement?: number
           promo_product_id: string
           total_revenue?: number
           total_uses?: number
@@ -132,6 +134,7 @@ export type Database = {
           id?: string
           influencer_name?: string
           last_used_at?: string | null
+          minimum_order_requirement?: number
           promo_product_id?: string
           total_revenue?: number
           total_uses?: number
@@ -232,6 +235,7 @@ export type Database = {
       validate_promo_code: {
         Args: {
           cart_items?: Json
+          customer_email?: string
           input_code: string
         }
         Returns: {
@@ -240,6 +244,7 @@ export type Database = {
           expires_at: string | null
           influencer_name: string | null
           message: string
+          minimum_order_requirement: number | null
           promo_code_id: string | null
           promo_product_id: string | null
           promo_product_name: string | null
