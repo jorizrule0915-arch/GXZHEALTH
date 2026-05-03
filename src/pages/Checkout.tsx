@@ -23,6 +23,7 @@ interface PromoValidationResult {
   expires_at: string | null;
   usage_limit: number | null;
   total_uses: number | null;
+  minimum_order_requirement: number | null;
 }
 
 interface AppliedPromoCode {
@@ -88,6 +89,7 @@ const Checkout = () => {
         name: item.name,
         quantity: item.quantity,
       })),
+      customer_email: customerInfo.email || null,
     });
 
     if (error) {

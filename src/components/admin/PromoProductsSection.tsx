@@ -22,10 +22,11 @@ interface CreateVoucherForm {
   discountPercent: string;
   expirationDate: string;
   usageLimit: string;
+  minimumOrderRequirement: string;
 }
 
 function emptyForm(): CreateVoucherForm {
-  return { code: '', productName: '', influencerName: '', discountPercent: '', expirationDate: '', usageLimit: '' };
+  return { code: '', productName: '', influencerName: '', discountPercent: '', expirationDate: '', usageLimit: '', minimumOrderRequirement: '' };
 }
 
 function normalizeCode(value: string) {
@@ -94,12 +95,16 @@ export default function PromoProductsSection() {
 
     const parsedDiscount = form.discountPercent.trim() ? Number(form.discountPercent) : null;
     const parsedLimit = form.usageLimit.trim() ? Number(form.usageLimit) : null;
+    const parsedMinOrder = form.minimumOrderRequirement.trim() ? Number(form.minimumOrderRequirement) : 0;
 
     if (parsedDiscount !== null && (Number.isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100)) {
       toast({ title: 'Discount must be between 0 and 100', variant: 'destructive' }); return;
     }
     if (parsedLimit !== null && (!Number.isInteger(parsedLimit) || parsedLimit < 1)) {
       toast({ title: 'Usage limit must be a whole number ≥ 1', variant: 'destructive' }); return;
+    }
+    if (Number.isNaN(parsedMinOrder) || parsedMinOrder < 0 || !Number.isInteger(parsedMinOrder)) {
+      toast({ title: 'Minimum order requirement must be a whole number ≥ 0', variant: 'destructive' }); return;
     }
 
     setSaving(true);
@@ -130,6 +135,7 @@ export default function PromoProductsSection() {
       discount_percent: parsedDiscount,
       expires_at: expiresAt,
       usage_limit: parsedLimit,
+      minimum_order_requirement: parsedMinOrder,
     };
 
     const { data: newCode, error: codeError } = await supabase
@@ -263,7 +269,7 @@ export default function PromoProductsSection() {
               />
             </div>
 
-            {/* Discount + expiry + limit */}
+            {/* Discount + expiry + limit + minimum order */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="vc-discount" className="text-slate-200">Discount %</Label>
@@ -292,6 +298,20 @@ export default function PromoProductsSection() {
                   className="border-slate-700 bg-slate-800/70 text-white"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="vc-min-orders" className="text-slate-200">Min Orders Required</Label>
+                <Input
+                  id="vc-min-orders"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="3"
+                  value={form.minimumOrderRequirement}
+                  onChange={(e) => setForm((f) => ({ ...f, minimumOrderRequirement: e.target.value }))}
+                  className="border-slate-700 bg-slate-800/70 text-white"
+                />
+                <p className="text-xs text-slate-500">How many orders must customer have completed to use this code?</p>
+              </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="vc-expiry" className="text-slate-200">Expiration Date</Label>
                 <Input
@@ -314,6 +334,11 @@ export default function PromoProductsSection() {
                   {' '}will activate <span className="font-semibold text-amber-300">only</span> when{' '}
                   <span className="font-semibold text-white">"{form.productName || '—'}"</span> is in the cart.
                 </p>
+                {form.minimumOrderRequirement && Number(form.minimumOrderRequirement) > 0 && (
+                  <p className="mt-2 text-xs text-orange-300">
+                    <span className="font-semibold">Requires {form.minimumOrderRequirement} previous order(s)</span> to activate
+                  </p>
+                )}
               </div>
             )}
 
@@ -416,6 +441,7 @@ export default function PromoProductsSection() {
                     <TableHead className="text-slate-400">Code</TableHead>
                     <TableHead className="text-slate-400">Applies to Product</TableHead>
                     <TableHead className="text-slate-400">Creator</TableHead>
+                    <TableHead className="text-slate-400">Min Orders</TableHead>
                     <TableHead className="text-slate-400">Uses</TableHead>
                     <TableHead className="text-slate-400">Revenue</TableHead>
                     <TableHead className="text-slate-400">Expiry</TableHead>
@@ -461,6 +487,16 @@ export default function PromoProductsSection() {
                             <UserRound className="h-4 w-4 text-slate-500" />
                             {code.influencer_name}
                           </span>
+                        </TableCell>
+                        <TableCell className="text-slate-300">
+                          {code.minimum_order_requirement && code.minimum_order_requirement > 0
+                            ? (
+                              <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-300">
+                                {code.minimum_order_requirement} order{code.minimum_order_requirement !== 1 ? 's' : ''}
+                              </Badge>
+                            )
+                            : <span className="text-slate-500">—</span>
+                          }
                         </TableCell>
                         <TableCell className="text-slate-300">
                           {code.total_uses}
