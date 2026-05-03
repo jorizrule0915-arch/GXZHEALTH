@@ -6,14 +6,12 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-  CreditCard,
   Landmark,
   Lock,
   QrCode,
   Receipt,
   ScanLine,
   ShieldCheck,
-  Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -63,7 +61,7 @@ interface PaymentProof {
   accountName: string;
 }
 
-type MethodKey = 'paypal' | 'venmo' | 'apple' | 'zelle';
+type MethodKey = 'apple' | 'zelle';
 
 interface PaymentMethod {
   label: string;
@@ -84,44 +82,6 @@ interface PaymentMethod {
 const fadeInUp = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
 
 const methodData: Record<MethodKey, PaymentMethod> = {
-  paypal: {
-    label: 'PayPal',
-    subtitle: 'Scan, pay, and submit proof right away',
-    description: 'Best for buyers who want a quick QR-based payment flow and can provide a transaction reference immediately.',
-    icon: CreditCard,
-    mode: 'proof',
-    qrSrc: '/paypal.jpeg',
-    gradientClass: 'from-[#003087] via-[#005ea6] to-[#009cde]',
-    iconClass: 'bg-[#003087] text-white',
-    badgeClass: 'border-[#003087]/20 bg-[#003087]/10 text-[#003087]',
-    buttonClass: 'bg-[#003087] text-white hover:bg-[#00266f]',
-    actionLabel: 'Pay with PayPal',
-    helperLabel: 'Scan the QR, send payment, then submit your reference details.',
-    steps: [
-      'Open PayPal and choose Send & Request.',
-      'Scan the QR code and confirm the receiver details.',
-      'Send the full amount, then copy your transaction or reference ID.',
-    ],
-  },
-  venmo: {
-    label: 'Venmo',
-    subtitle: 'Mobile-first payment with proof submission',
-    description: 'Great for phone users who want to pay inside Venmo and immediately submit the proof details from the same flow.',
-    icon: Smartphone,
-    mode: 'proof',
-    qrSrc: '/Venmo.png',
-    gradientClass: 'from-[#008cff] via-[#22b8ff] to-[#3ddbd9]',
-    iconClass: 'bg-[#008cff] text-white',
-    badgeClass: 'border-[#008cff]/20 bg-[#008cff]/10 text-[#008cff]',
-    buttonClass: 'bg-[#008cff] text-white hover:bg-[#0070d1]',
-    actionLabel: 'Pay with Venmo',
-    helperLabel: 'Use the app to scan and submit your proof after payment.',
-    steps: [
-      'Open the Venmo app and tap the QR icon.',
-      'Switch to Scan and point your camera at the code.',
-      'Send the payment, then paste your reference ID and account name.',
-    ],
-  },
   apple: {
     label: 'Apple Pay',
     subtitle: 'Ask the owner to send direct payment instructions',
@@ -680,13 +640,25 @@ const Payment = () => {
                           Use these when the customer is ready to pay immediately and can provide proof after the transfer.
                         </p>
                       </div>
-                      <div className="rounded-[22px] border border-border/70 bg-background/80 px-4 py-3 text-sm text-muted-foreground">
-                        {payNowMethods.length} payment methods ready for immediate checkout
+                      <div className="rounded-[22px] border-2 border-dashed border-primary/50 bg-primary/5 px-5 py-3 text-center">
+                        <span className="font-display text-2xl font-black tracking-tight text-primary">COMING SOON</span>
                       </div>
                     </div>
+                  </section>
 
-                    <div className="grid gap-5 lg:grid-cols-2">
-                      {payNowMethods.map(renderMethodCard)}
+                  {/* Credit / Debit Card section */}
+                  <section className="space-y-4">
+                    <div className="flex flex-col gap-4 rounded-[28px] border border-border/70 bg-card/75 p-5 shadow-[0_24px_80px_-60px_rgba(15,23,42,0.45)] sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+                      <div className="space-y-2">
+                        <Badge className="rounded-full border-violet-500/20 bg-violet-500/10 px-4 py-1.5 text-violet-600">Card payment</Badge>
+                        <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Credit &amp; Debit Card</h2>
+                        <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                          Pay securely with your credit or debit card — no card details entered here.
+                        </p>
+                      </div>
+                      <div className="rounded-[22px] border-2 border-dashed border-violet-500/50 bg-violet-500/5 px-5 py-3 text-center">
+                        <span className="font-display text-2xl font-black tracking-tight text-violet-600">COMING SOON</span>
+                      </div>
                     </div>
                   </section>
 
@@ -856,7 +828,7 @@ const Payment = () => {
                     <div className="space-y-2">
                       <h2 className="text-lg font-semibold text-foreground">What happens next</h2>
                       <p className="text-sm leading-6 text-muted-foreground">
-                        Submit proof for PayPal or Venmo, or request owner instructions for Apple Pay or Zelle. In every case, the owner reviews the order before moving it forward.
+                        Request owner instructions for Apple Pay or Zelle. In every case, the owner reviews the order before moving it forward.
                       </p>
                     </div>
                   </CardContent>
