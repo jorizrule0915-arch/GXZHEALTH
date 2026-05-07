@@ -2,11 +2,19 @@
 ALTER TABLE public.promo_codes
 ADD COLUMN IF NOT EXISTS minimum_order_requirement INTEGER DEFAULT 0;
 
--- Add constraint for minimum_order_requirement
-ALTER TABLE public.promo_codes
-ADD CONSTRAINT promo_codes_minimum_order_check CHECK (
-    minimum_order_requirement >= 0
-);
+-- Add constraint for minimum_order_requirement (only if it doesn't exist)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'promo_codes_minimum_order_check'
+  ) THEN
+    ALTER TABLE public.promo_codes
+    ADD CONSTRAINT promo_codes_minimum_order_check CHECK (
+        minimum_order_requirement >= 0
+    );
+  END IF;
+END $$;
 
 -- Update validate_promo_code function to check minimum order requirement
 CREATE OR REPLACE FUNCTION public.validate_promo_code(
@@ -137,8 +145,8 @@ BEGIN
   IF customer_email IS NOT NULL THEN
     SELECT COUNT(*)
     INTO customer_order_count
-    FROM public.orders
-    WHERE lower(customer_email) = lower(customer_email);
+    FROM public.orders AS o
+    WHERE LOWER(o.customer_email) = LOWER(customer_email);
 
     IF customer_order_count < matched_code.minimum_order_requirement THEN
       RETURN QUERY SELECT

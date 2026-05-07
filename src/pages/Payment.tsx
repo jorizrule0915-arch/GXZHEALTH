@@ -364,7 +364,7 @@ const Payment = () => {
           .update({
             payment_method: method.label,
             customer_name: contactOrderData.customer?.name ?? null,
-            customer_email: contactOrderData.customer?.email ?? null,
+            customer_email: contactOrderData.customer?.email ? contactOrderData.customer.email.trim().toLowerCase() : null,
             customer_phone: contactOrderData.customer?.phone ?? null,
             status: 'payment_contact_requested',
           })

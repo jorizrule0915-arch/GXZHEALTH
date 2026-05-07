@@ -361,7 +361,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         from: 'orders@gxzhealth.com',
-        to: ['jorizrule0@gmail.com', 'g@gxzhealth.com'],
+        to: ['jorizrule0@gmail.com', 'g@gxzhealth.com', 'g@gxzpeptides.com', 'jorizrule0915@gmail.com'],
         subject: `New Order ${orderNumber} from ${orderData.customer.name}`,
         html: emailHtml
       })

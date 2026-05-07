@@ -82,6 +82,14 @@ const Checkout = () => {
       };
     }
 
+    // Require email for promo code validation
+    if (!customerInfo.email || customerInfo.email.trim() === '') {
+      return {
+        valid: false,
+        message: 'Please enter your email address before applying a promo code.',
+      };
+    }
+
     const { data, error } = await supabase.rpc('validate_promo_code', {
       input_code: normalizedCode,
       cart_items: items.map((item) => ({
@@ -89,7 +97,7 @@ const Checkout = () => {
         name: item.name,
         quantity: item.quantity,
       })),
-      customer_email: customerInfo.email || null,
+      customer_email: customerInfo.email.trim().toLowerCase(),
     });
 
     if (error) {
@@ -340,7 +348,7 @@ const Checkout = () => {
     const { error } = await supabase.from('orders').insert({
       order_number: orderNumber,
       customer_name: customerInfo.name,
-      customer_email: customerInfo.email,
+      customer_email: customerInfo.email.trim().toLowerCase(),
       customer_phone: customerInfo.phone,
       customer_address: customerInfo.address,
       customer_city: customerInfo.city,
