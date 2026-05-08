@@ -841,7 +841,7 @@ const Payment = () => {
 
       <Footer />
 
-      <Dialog open={Boolean(proofMethod)} onOpenChange={(open) => (!open ? closeProofDialog() : undefined)}>
+      <Dialog modal={false} open={Boolean(proofMethod)} onOpenChange={(open) => (!open ? closeProofDialog() : undefined)}>
         <DialogContent className="max-h-[calc(100vh-1.5rem)] max-w-4xl overflow-hidden border-border/70 p-0 sm:max-h-[calc(100vh-2rem)]">
           {proofMethod && (
             <div className="grid max-h-[calc(100vh-1.5rem)] gap-0 lg:grid-cols-[0.95fr_1.05fr] sm:max-h-[calc(100vh-2rem)]">
@@ -957,7 +957,7 @@ const Payment = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(contactMethod)} onOpenChange={(open) => (!open ? closeContactDialog() : undefined)}>
+      <Dialog modal={false} open={Boolean(contactMethod)} onOpenChange={(open) => (!open ? closeContactDialog() : undefined)}>
         <DialogContent className="max-h-[calc(100vh-1.5rem)] max-w-3xl overflow-hidden border-border/70 p-0 sm:max-h-[calc(100vh-2rem)]">
           {contactMethod && (
             <div className="grid max-h-[calc(100vh-1.5rem)] gap-0 lg:grid-cols-[0.92fr_1.08fr] sm:max-h-[calc(100vh-2rem)]">
