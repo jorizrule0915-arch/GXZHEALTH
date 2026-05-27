@@ -1,3 +1,25 @@
 {
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "https://zxgwellness.com",
+      "permanent": true
+    },
+    {
+      "source": "/products",
+      "destination": "https://zxgwellness.com",
+      "permanent": true
+    },
+    {
+      "source": "/products/:path*",
+      "destination": "https://zxgwellness.com",
+      "permanent": true
+    },
+    {
+      "source": "/how-to-use",
+      "destination": "https://zxgwellness.com",
+      "permanent": true
+    }
+  ]
 }
