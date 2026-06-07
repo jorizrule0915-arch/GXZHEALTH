@@ -16,6 +16,9 @@ type ProductRow = Tables<'products'>;
 type PromoProductInsert = TablesInsert<'promo_products'>;
 type PromoCodeInsert = TablesInsert<'promo_codes'>;
 
+const ALL_PRODUCTS_NAME = 'All Products';
+const ALL_PRODUCTS_SKU = '__ALL__';
+
 interface CreateVoucherForm {
   code: string;
   productName: string;
@@ -88,9 +91,14 @@ export default function PromoProductsSection() {
 
   const productSuggestions = useMemo(() => {
     const names = new Map<string, string>();
+    names.set(ALL_PRODUCTS_NAME.toLowerCase(), ALL_PRODUCTS_NAME);
     catalogProducts.forEach((product) => names.set(product.name.toLowerCase(), product.name));
     promoProducts.forEach((product) => names.set(product.name.toLowerCase(), product.name));
-    return [...names.values()].sort((left, right) => left.localeCompare(right));
+    return [...names.values()].sort((left, right) => {
+      if (left === ALL_PRODUCTS_NAME) return -1;
+      if (right === ALL_PRODUCTS_NAME) return 1;
+      return left.localeCompare(right);
+    });
   }, [catalogProducts, promoProducts]);
 
   const saveVoucher = async () => {
@@ -124,10 +132,18 @@ export default function PromoProductsSection() {
     setSaving(true);
 
     // 1. Find or create the promo product by name (case-insensitive match)
-    let product = promoProducts.find((p) => p.name.toLowerCase() === productName.toLowerCase()) ?? null;
+    const isAllProductsVoucher = productName.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase();
+    let product = promoProducts.find((p) => (
+      isAllProductsVoucher
+        ? p.sku === ALL_PRODUCTS_SKU || p.name.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase()
+        : p.name.toLowerCase() === productName.toLowerCase()
+    )) ?? null;
 
     if (!product) {
-      const payload: PromoProductInsert = { name: productName, sku: null };
+      const payload: PromoProductInsert = {
+        name: isAllProductsVoucher ? ALL_PRODUCTS_NAME : productName,
+        sku: isAllProductsVoucher ? ALL_PRODUCTS_SKU : null,
+      };
       const { data, error } = await supabase.from('promo_products').insert(payload).select('*').single();
       if (error) {
         setSaving(false);
@@ -135,6 +151,21 @@ export default function PromoProductsSection() {
       }
       product = data;
       setPromoProducts((prev) => [...prev, data]);
+    } else if (isAllProductsVoucher && product.sku !== ALL_PRODUCTS_SKU) {
+      const { data, error } = await supabase
+        .from('promo_products')
+        .update({ name: ALL_PRODUCTS_NAME, sku: ALL_PRODUCTS_SKU })
+        .eq('id', product.id)
+        .select('*')
+        .single();
+
+      if (error) {
+        setSaving(false);
+        toast({ title: 'Unable to update all-products entry', description: error.message, variant: 'destructive' }); return;
+      }
+
+      product = data;
+      setPromoProducts((prev) => prev.map((entry) => (entry.id === data.id ? data : entry)));
     }
 
     // 2. Insert the promo code linked to that product
@@ -165,7 +196,9 @@ export default function PromoProductsSection() {
     setForm(emptyForm());
     toast({
       title: 'Voucher created',
-      description: `${newCode.code} is now active for carts containing "${product.name}".`,
+      description: isAllProductsVoucher
+        ? `${newCode.code} is now active for all products.`
+        : `${newCode.code} is now active for carts containing "${product.name}".`,
     });
   };
 
@@ -199,7 +232,7 @@ export default function PromoProductsSection() {
         <CardHeader>
           <CardTitle className="text-white">Voucher Codes</CardTitle>
           <CardDescription className="text-slate-400">
-            Create product-specific voucher codes. Choose the exact storefront product so checkout can match the code to the cart.
+            Create product-specific voucher codes, or choose All Products to make a code work for the whole cart.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -259,7 +292,7 @@ export default function PromoProductsSection() {
               <Input
                 id="vc-product"
                 list="promo-product-suggestions"
-                placeholder="Pick a product above or type the exact cart product"
+                placeholder="Choose All Products or a specific product"
                 value={form.productName}
                 onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
                 className="border-slate-700 bg-slate-800/70 text-white placeholder:text-slate-500"
@@ -270,7 +303,7 @@ export default function PromoProductsSection() {
                 ))}
               </datalist>
               <p className="text-xs text-slate-500">
-                Best choice: click the product as it appears on the storefront. A mismatch here is the most common reason a valid code will not apply.
+                Choose All Products for a sitewide code. For product-only codes, click the exact storefront product.
               </p>
             </div>
 
@@ -350,8 +383,12 @@ export default function PromoProductsSection() {
                 <p className="mt-1 text-slate-300">
                   Code <span className="font-mono font-bold text-white">{form.code || '-'}</span>
                   {form.discountPercent && <span className="text-emerald-300"> ({form.discountPercent}% off)</span>}
-                  {' '}will activate <span className="font-semibold text-amber-300">only</span> when{' '}
-                  <span className="font-semibold text-white">"{form.productName || '-'}"</span> is in the cart.
+                  {' '}will activate for{' '}
+                  <span className="font-semibold text-white">
+                    {form.productName.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase()
+                      ? 'all products'
+                      : `"${form.productName || '-'}" only`}
+                  </span>.
                 </p>
                 {form.minimumOrderRequirement && Number(form.minimumOrderRequirement) > 0 && (
                   <p className="mt-2 text-xs text-orange-300">
@@ -379,7 +416,7 @@ export default function PromoProductsSection() {
           <Card className="border-slate-800 bg-slate-900/70">
             <CardHeader>
               <CardTitle className="text-white">Products with Vouchers</CardTitle>
-              <CardDescription className="text-slate-400">Each product groups the codes that are locked to it.</CardDescription>
+              <CardDescription className="text-slate-400">All Products codes are sitewide. Other buckets are locked to that product.</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (

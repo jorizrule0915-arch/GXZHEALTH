@@ -35,6 +35,8 @@ interface AppliedPromoCode {
   discountPercent: number;
 }
 
+const ALL_PRODUCTS_PROMO_NAME = 'All Products';
+
 function normalizePromoCode(value: string) {
   return value.toUpperCase().replace(/\s+/g, '').trim();
 }
@@ -283,6 +285,10 @@ const Checkout = () => {
 
   useEffect(() => {
     if (!appliedPromoCode) {
+      return;
+    }
+
+    if (appliedPromoCode.promoProductName.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase()) {
       return;
     }
 
