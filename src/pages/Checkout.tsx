@@ -158,6 +158,107 @@ const Checkout = () => {
       error = retry.error;
     }
 
+    const shouldUseDirectPromoLookup =
+      errorMessage.includes('could not choose the best candidate function') ||
+      errorMessage.includes('validate_promo_code');
+
+    if (error && shouldUseDirectPromoLookup) {
+      const { data: promoCode, error: promoCodeError } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .ilike('code', normalizedCode)
+        .maybeSingle();
+
+      if (promoCodeError) {
+        return {
+          valid: false,
+          message: promoCodeError.message,
+        };
+      }
+
+      if (!promoCode) {
+        return {
+          valid: false,
+          message: 'Promo code not found.',
+        };
+      }
+
+      const { data: promoProduct, error: promoProductError } = await supabase
+        .from('promo_products')
+        .select('*')
+        .eq('id', promoCode.promo_product_id)
+        .maybeSingle();
+
+      if (promoProductError) {
+        return {
+          valid: false,
+          message: promoProductError.message,
+        };
+      }
+
+      if (!promoProduct) {
+        return {
+          valid: false,
+          message: 'This promo code is not linked to a product.',
+        };
+      }
+
+      if (promoCode.expires_at && new Date(promoCode.expires_at) < new Date()) {
+        return {
+          valid: false,
+          message: 'This promo code has expired.',
+        };
+      }
+
+      if (promoCode.usage_limit !== null && promoCode.total_uses >= promoCode.usage_limit) {
+        return {
+          valid: false,
+          message: 'This promo code has reached its usage limit.',
+        };
+      }
+
+      const isAllProductsCode =
+        promoProduct.sku === '__ALL__' ||
+        promoProduct.name.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase();
+      const matchingQuantity = isAllProductsCode ? totalItems : getMatchingPromoQuantity(promoProduct.name);
+      const requiredQuantity = Number(promoCode.minimum_order_requirement ?? 0);
+
+      if (matchingQuantity === 0) {
+        return {
+          valid: false,
+          message: isAllProductsCode
+            ? 'Add items to your cart before applying this code.'
+            : `This code only works for ${promoProduct.name}.`,
+        };
+      }
+
+      if (requiredQuantity > 0 && matchingQuantity < requiredQuantity) {
+        return {
+          valid: false,
+          message: `This code requires at least ${requiredQuantity} ${promoProduct.name} item(s) in your cart. You have ${matchingQuantity}.`,
+        };
+      }
+
+      return {
+        valid: true,
+        message: 'Promo code applied successfully.',
+        result: {
+          valid: true,
+          message: 'Promo code applied successfully.',
+          promo_code_id: promoCode.id,
+          promo_product_id: promoProduct.id,
+          promo_product_name: promoProduct.name,
+          code: promoCode.code,
+          influencer_name: promoCode.influencer_name,
+          discount_percent: Number(promoCode.discount_percent ?? 0),
+          expires_at: promoCode.expires_at,
+          usage_limit: promoCode.usage_limit,
+          total_uses: promoCode.total_uses,
+          minimum_order_requirement: promoCode.minimum_order_requirement,
+        },
+      };
+    }
+
     if (error) {
       return {
         valid: false,
