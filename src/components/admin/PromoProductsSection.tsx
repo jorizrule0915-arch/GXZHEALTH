@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Package, Plus, TicketPercent, Trash2, UserRound } from 'lucide-react';
+import { Package, TicketPercent, Trash2, UserRound } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
@@ -12,12 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 type PromoProductRow = Tables<'promo_products'>;
 type PromoCodeRow = Tables<'promo_codes'>;
+type ProductRow = Tables<'products'>;
 type PromoProductInsert = TablesInsert<'promo_products'>;
 type PromoCodeInsert = TablesInsert<'promo_codes'>;
 
 interface CreateVoucherForm {
   code: string;
-  productName: string;       // typed or selected — this is the product the code is locked to
+  productName: string;
   influencerName: string;
   discountPercent: string;
   expirationDate: string;
@@ -38,7 +39,7 @@ function formatCurrency(value: number) {
 }
 
 function formatDate(dateValue: string | null) {
-  if (!dateValue) return '—';
+  if (!dateValue) return '-';
   return new Date(dateValue).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
@@ -46,6 +47,7 @@ export default function PromoProductsSection() {
   const { toast } = useToast();
   const [promoProducts, setPromoProducts] = useState<PromoProductRow[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCodeRow[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingCodeId, setDeletingCodeId] = useState<string | null>(null);
@@ -55,15 +57,20 @@ export default function PromoProductsSection() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: products, error: pe }, { data: codes, error: ce }] = await Promise.all([
+    const [{ data: products, error: pe }, { data: codes, error: ce }, { data: catalog, error: catalogError }] = await Promise.all([
       supabase.from('promo_products').select('*').order('created_at', { ascending: true }),
       supabase.from('promo_codes').select('*').order('created_at', { ascending: false }),
+      supabase.from('products').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
     ]);
     setLoading(false);
     if (pe) { toast({ title: 'Unable to load products', description: pe.message, variant: 'destructive' }); return; }
     if (ce) { toast({ title: 'Unable to load codes', description: ce.message, variant: 'destructive' }); return; }
+    if (catalogError) {
+      toast({ title: 'Unable to load catalog products', description: catalogError.message, variant: 'destructive' });
+    }
     setPromoProducts(products ?? []);
     setPromoCodes(codes ?? []);
+    setCatalogProducts(catalog ?? []);
   };
 
   useEffect(() => { void load(); }, []);
@@ -78,6 +85,13 @@ export default function PromoProductsSection() {
   const visibleCodes = useMemo(() =>
     filterProductId === 'all' ? promoCodes : (codesByProductId[filterProductId] ?? []),
   [filterProductId, promoCodes, codesByProductId]);
+
+  const productSuggestions = useMemo(() => {
+    const names = new Map<string, string>();
+    catalogProducts.forEach((product) => names.set(product.name.toLowerCase(), product.name));
+    promoProducts.forEach((product) => names.set(product.name.toLowerCase(), product.name));
+    return [...names.values()].sort((left, right) => left.localeCompare(right));
+  }, [catalogProducts, promoProducts]);
 
   const saveVoucher = async () => {
     const normalizedCode = normalizeCode(form.code);
@@ -101,10 +115,10 @@ export default function PromoProductsSection() {
       toast({ title: 'Discount must be between 0 and 100', variant: 'destructive' }); return;
     }
     if (parsedLimit !== null && (!Number.isInteger(parsedLimit) || parsedLimit < 1)) {
-      toast({ title: 'Usage limit must be a whole number ≥ 1', variant: 'destructive' }); return;
+      toast({ title: 'Usage limit must be a whole number 1 or higher', variant: 'destructive' }); return;
     }
     if (Number.isNaN(parsedMinOrder) || parsedMinOrder < 0 || !Number.isInteger(parsedMinOrder)) {
-      toast({ title: 'Minimum order requirement must be a whole number ≥ 0', variant: 'destructive' }); return;
+      toast({ title: 'Previous orders required must be a whole number 0 or higher', variant: 'destructive' }); return;
     }
 
     setSaving(true);
@@ -151,7 +165,7 @@ export default function PromoProductsSection() {
     setForm(emptyForm());
     toast({
       title: 'Voucher created',
-      description: `${newCode.code} is now active — only works when "${product.name}" is in the cart.`,
+      description: `${newCode.code} is now active for carts containing "${product.name}".`,
     });
   };
 
@@ -185,19 +199,19 @@ export default function PromoProductsSection() {
         <CardHeader>
           <CardTitle className="text-white">Voucher Codes</CardTitle>
           <CardDescription className="text-slate-400">
-            Create a voucher code and lock it to a specific product. The code will only activate at checkout when that product is in the cart.
+            Create product-specific voucher codes. Choose the exact storefront product so checkout can match the code to the cart.
           </CardDescription>
         </CardHeader>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[26rem_minmax(0,1fr)]">
+      <div className="grid gap-6 2xl:grid-cols-[28rem_minmax(0,1fr)]">
 
-        {/* ── Create voucher form ── */}
+        {/* Create voucher form */}
         <Card className="border-slate-800 bg-slate-900/70">
           <CardHeader>
             <CardTitle className="text-white">Create New Voucher</CardTitle>
             <CardDescription className="text-slate-400">
-              Fill in the code, choose which product it applies to, and set the discount.
+              Use Discount % for the amount off. Leave Previous orders required at 0 unless this is a loyalty-only code.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -209,7 +223,7 @@ export default function PromoProductsSection() {
               </Label>
               <Input
                 id="vc-code"
-                placeholder="RETAOFF50"
+                placeholder="SAVE25"
                 value={form.code}
                 onChange={(e) => setForm((f) => ({ ...f, code: normalizeCode(e.target.value) }))}
                 className="border-slate-700 bg-slate-800/70 font-mono text-white placeholder:text-slate-500"
@@ -217,27 +231,26 @@ export default function PromoProductsSection() {
               <p className="text-xs text-slate-500">Auto-uppercased. This is what the customer types at checkout.</p>
             </div>
 
-            {/* Product name — the lock */}
+            {/* Product name lock */}
             <div className="space-y-2">
               <Label htmlFor="vc-product" className="text-slate-200">
                 Applies to Product <span className="text-red-400">*</span>
               </Label>
 
-              {/* Dropdown of existing products + free-type for new */}
-              {promoProducts.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-2">
-                  {promoProducts.map((p) => (
+              {productSuggestions.length > 0 && (
+                <div className="mb-2 flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/40 p-2">
+                  {productSuggestions.map((name) => (
                     <button
-                      key={p.id}
+                      key={name}
                       type="button"
-                      onClick={() => setForm((f) => ({ ...f, productName: p.name }))}
+                      onClick={() => setForm((f) => ({ ...f, productName: name }))}
                       className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                        form.productName.toLowerCase() === p.name.toLowerCase()
+                        form.productName.toLowerCase() === name.toLowerCase()
                           ? 'border-blue-500/50 bg-blue-500/20 text-blue-200'
                           : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'
                       }`}
                     >
-                      {p.name}
+                      {name}
                     </button>
                   ))}
                 </div>
@@ -245,13 +258,19 @@ export default function PromoProductsSection() {
 
               <Input
                 id="vc-product"
-                placeholder="e.g. Retatrutide, GXZ GLP-1"
+                list="promo-product-suggestions"
+                placeholder="Pick a product above or type the exact cart product"
                 value={form.productName}
                 onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
                 className="border-slate-700 bg-slate-800/70 text-white placeholder:text-slate-500"
               />
+              <datalist id="promo-product-suggestions">
+                {productSuggestions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
               <p className="text-xs text-slate-500">
-                The code will <span className="font-semibold text-amber-400">only work</span> when this product is in the customer's cart. Pick an existing one above or type a new product name.
+                Best choice: click the product as it appears on the storefront. A mismatch here is the most common reason a valid code will not apply.
               </p>
             </div>
 
@@ -272,14 +291,14 @@ export default function PromoProductsSection() {
             {/* Discount + expiry + limit + minimum order */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="vc-discount" className="text-slate-200">Discount %</Label>
+                <Label htmlFor="vc-discount" className="text-slate-200">Discount % off</Label>
                 <Input
                   id="vc-discount"
                   type="number"
                   min="0"
                   max="100"
                   step="0.01"
-                  placeholder="50"
+                  placeholder="25"
                   value={form.discountPercent}
                   onChange={(e) => setForm((f) => ({ ...f, discountPercent: e.target.value }))}
                   className="border-slate-700 bg-slate-800/70 text-white"
@@ -299,18 +318,18 @@ export default function PromoProductsSection() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vc-min-orders" className="text-slate-200">Min Orders Required</Label>
+                <Label htmlFor="vc-min-orders" className="text-slate-200">Previous Orders Required</Label>
                 <Input
                   id="vc-min-orders"
                   type="number"
                   min="0"
                   step="1"
-                  placeholder="3"
+                  placeholder="0"
                   value={form.minimumOrderRequirement}
                   onChange={(e) => setForm((f) => ({ ...f, minimumOrderRequirement: e.target.value }))}
                   className="border-slate-700 bg-slate-800/70 text-white"
                 />
-                <p className="text-xs text-slate-500">How many orders must customer have completed to use this code?</p>
+                <p className="text-xs text-slate-500">Use 0 for a normal 25% off code. This is not the discount amount.</p>
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="vc-expiry" className="text-slate-200">Expiration Date</Label>
@@ -329,10 +348,10 @@ export default function PromoProductsSection() {
               <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 text-sm">
                 <p className="font-semibold text-blue-200">Preview</p>
                 <p className="mt-1 text-slate-300">
-                  Code <span className="font-mono font-bold text-white">{form.code || '—'}</span>
+                  Code <span className="font-mono font-bold text-white">{form.code || '-'}</span>
                   {form.discountPercent && <span className="text-emerald-300"> ({form.discountPercent}% off)</span>}
                   {' '}will activate <span className="font-semibold text-amber-300">only</span> when{' '}
-                  <span className="font-semibold text-white">"{form.productName || '—'}"</span> is in the cart.
+                  <span className="font-semibold text-white">"{form.productName || '-'}"</span> is in the cart.
                 </p>
                 {form.minimumOrderRequirement && Number(form.minimumOrderRequirement) > 0 && (
                   <p className="mt-2 text-xs text-orange-300">
@@ -348,12 +367,12 @@ export default function PromoProductsSection() {
               disabled={saving}
             >
               <TicketPercent className="mr-2 h-4 w-4" />
-              {saving ? 'Saving…' : 'Create Voucher Code'}
+              {saving ? 'Saving...' : 'Create Voucher Code'}
             </Button>
           </CardContent>
         </Card>
 
-        {/* ── Right panel: product list + codes table ── */}
+        {/* Right panel: product list + codes table */}
         <div className="space-y-6">
 
           {/* Product buckets */}
@@ -364,7 +383,7 @@ export default function PromoProductsSection() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="text-sm text-slate-400">Loading…</p>
+                <p className="text-sm text-slate-400">Loading...</p>
               ) : promoProducts.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
                   No products yet. Create your first voucher code on the left.
@@ -435,6 +454,72 @@ export default function PromoProductsSection() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
+              <div className="block space-y-3 p-4 lg:hidden">
+                {loading ? (
+                  <p className="py-6 text-center text-sm text-slate-500">Loading...</p>
+                ) : visibleCodes.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-slate-500">No voucher codes yet.</p>
+                ) : visibleCodes.map((code) => {
+                  const product = promoProducts.find((p) => p.id === code.promo_product_id);
+                  const isExpired = Boolean(code.expires_at && new Date(code.expires_at) < new Date());
+                  const limitReached = code.usage_limit !== null && code.total_uses >= code.usage_limit;
+
+                  return (
+                    <div key={code.id} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-sm font-semibold text-blue-300">{code.code}</span>
+                            {code.discount_percent !== null && (
+                              <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+                                {code.discount_percent}% off
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-2 truncate text-sm text-slate-300">{product?.name ?? '-'}</p>
+                          <p className="mt-1 text-xs text-slate-500">Creator: {code.influencer_name}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="shrink-0 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                          onClick={() => void deleteCode(code)}
+                          disabled={deletingCodeId === code.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                          <p className="text-slate-500">Uses</p>
+                          <p className="mt-1 font-semibold text-slate-200">
+                            {code.total_uses}{code.usage_limit !== null ? ` / ${code.usage_limit}` : ''}
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                          <p className="text-slate-500">Revenue</p>
+                          <p className="mt-1 font-semibold text-emerald-300">{formatCurrency(Number(code.total_revenue))}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                          <p className="text-slate-500">Previous orders</p>
+                          <p className="mt-1 font-semibold text-slate-200">{code.minimum_order_requirement ?? 0}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                          <p className="text-slate-500">Expiry</p>
+                          <p className="mt-1 font-semibold text-slate-200">{formatDate(code.expires_at)}</p>
+                        </div>
+                      </div>
+                      {(isExpired || limitReached) && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {isExpired && <Badge variant="outline" className="border-red-500/30 text-red-300">Expired</Badge>}
+                          {limitReached && <Badge variant="outline" className="border-amber-500/30 text-amber-300">Limit reached</Badge>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hidden overflow-x-auto lg:block">
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-800 hover:bg-transparent">
@@ -451,11 +536,11 @@ export default function PromoProductsSection() {
                 <TableBody>
                   {loading ? (
                     <TableRow className="border-slate-800">
-                      <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">Loading…</TableCell>
+                      <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">Loading...</TableCell>
                     </TableRow>
                   ) : visibleCodes.length === 0 ? (
                     <TableRow className="border-slate-800">
-                      <TableCell colSpan={7} className="py-10 text-center text-sm text-slate-500">
+                      <TableCell colSpan={8} className="py-10 text-center text-sm text-slate-500">
                         No voucher codes yet.
                       </TableCell>
                     </TableRow>
@@ -479,7 +564,7 @@ export default function PromoProductsSection() {
                         <TableCell>
                           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
                             <Package className="h-3 w-3" />
-                            {product?.name ?? '—'}
+                            {product?.name ?? '-'}
                           </span>
                         </TableCell>
                         <TableCell className="text-slate-300">
@@ -495,7 +580,7 @@ export default function PromoProductsSection() {
                                 {code.minimum_order_requirement} order{code.minimum_order_requirement !== 1 ? 's' : ''}
                               </Badge>
                             )
-                            : <span className="text-slate-500">—</span>
+                            : <span className="text-slate-500">-</span>
                           }
                         </TableCell>
                         <TableCell className="text-slate-300">
@@ -532,6 +617,7 @@ export default function PromoProductsSection() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </div>

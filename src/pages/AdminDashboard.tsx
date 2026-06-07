@@ -910,11 +910,11 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <div className="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 lg:px-8 lg:py-8">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-6">
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <Card className="border-slate-800 bg-slate-900/75">
-              <CardContent className="space-y-4 p-5">
+              <CardContent className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:block lg:space-y-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Live clock</p>
                   <p className="mt-2 text-2xl font-bold text-white">{now.toLocaleTimeString('en-US')}</p>
@@ -947,7 +947,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={() => setActiveSection(item.id)}
                     className={cn(
-                      'min-w-[11rem] rounded-2xl border px-4 py-3 text-left transition-colors lg:min-w-0',
+                      'min-w-[9.75rem] rounded-2xl border px-3 py-3 text-left transition-colors sm:min-w-[11rem] sm:px-4 lg:min-w-0',
                       active
                         ? 'border-blue-500/30 bg-blue-500/15 text-white'
                         : 'border-slate-800 bg-slate-900/65 text-slate-300 hover:border-slate-700 hover:text-white'
@@ -968,10 +968,10 @@ export default function AdminDashboard() {
             </div>
           </aside>
 
-          <section className="space-y-6">
+          <section className="min-w-0 space-y-6">
             <div className="flex flex-col gap-3 rounded-[28px] border border-slate-800 bg-slate-900/70 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
-              <div>
-                <h1 className="text-3xl font-bold text-white">Operations Dashboard</h1>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold text-white sm:text-3xl">Operations Dashboard</h1>
                 <p className="mt-1 text-sm text-slate-400">
                   Track submitted orders, monitor Apple Pay and Zelle follow-ups, review checkout leads, clean up old records, and manage the product catalog from one place.
                 </p>

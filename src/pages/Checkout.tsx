@@ -90,15 +90,29 @@ const Checkout = () => {
       };
     }
 
-    const { data, error } = await supabase.rpc('validate_promo_code', {
+    const validationArgs = {
       input_code: normalizedCode,
       cart_items: items.map((item) => ({
         id: item.id,
         name: item.name,
         quantity: item.quantity,
       })),
+    };
+
+    let { data, error } = await supabase.rpc('validate_promo_code', {
+      ...validationArgs,
       customer_email: customerInfo.email.trim().toLowerCase(),
     });
+
+    const canRetryWithoutEmail =
+      error?.message?.toLowerCase().includes('validate_promo_code') &&
+      error.message.toLowerCase().includes('customer_email');
+
+    if (canRetryWithoutEmail) {
+      const retry = await supabase.rpc('validate_promo_code', validationArgs);
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       return {
