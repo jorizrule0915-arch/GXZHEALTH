@@ -115,7 +115,7 @@ export default function PromoProductsSection() {
       toast({ title: 'Usage limit must be a whole number 1 or higher', variant: 'destructive' }); return;
     }
     if (Number.isNaN(parsedMinOrder) || parsedMinOrder < 0 || !Number.isInteger(parsedMinOrder)) {
-      toast({ title: 'Previous orders required must be a whole number 0 or higher', variant: 'destructive' }); return;
+      toast({ title: 'Minimum product quantity must be a whole number 0 or higher', variant: 'destructive' }); return;
     }
 
     setSaving(true);
@@ -233,7 +233,7 @@ export default function PromoProductsSection() {
           <CardHeader>
             <CardTitle className="text-white">Create New Voucher</CardTitle>
             <CardDescription className="text-slate-400">
-              Use Discount % for the amount off. Leave Previous orders required at 0 unless this is a loyalty-only code.
+              Use Discount % for the amount off. Use Minimum product quantity when a code should require multiple matching items in the cart.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -340,7 +340,7 @@ export default function PromoProductsSection() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vc-min-orders" className="text-slate-200">Previous Orders Required</Label>
+                <Label htmlFor="vc-min-orders" className="text-slate-200">Minimum Product Quantity</Label>
                 <Input
                   id="vc-min-orders"
                   type="number"
@@ -351,7 +351,7 @@ export default function PromoProductsSection() {
                   onChange={(e) => setForm((f) => ({ ...f, minimumOrderRequirement: e.target.value }))}
                   className="border-slate-700 bg-slate-800/70 text-white"
                 />
-                <p className="text-xs text-slate-500">Use 0 for a normal 25% off code. This is not the discount amount.</p>
+                <p className="text-xs text-slate-500">Use 3 to require 3 matching products in this checkout. Use 0 for no minimum.</p>
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="vc-expiry" className="text-slate-200">Expiration Date</Label>
@@ -381,7 +381,7 @@ export default function PromoProductsSection() {
                 </p>
                 {form.minimumOrderRequirement && Number(form.minimumOrderRequirement) > 0 && (
                   <p className="mt-2 text-xs text-orange-300">
-                    <span className="font-semibold">Requires {form.minimumOrderRequirement} previous order(s)</span> to activate
+                    <span className="font-semibold">Requires {form.minimumOrderRequirement} matching item(s)</span> in the cart
                   </p>
                 )}
               </div>
@@ -527,7 +527,7 @@ export default function PromoProductsSection() {
                           <p className="mt-1 font-semibold text-emerald-300">{formatCurrency(Number(code.total_revenue))}</p>
                         </div>
                         <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                          <p className="text-slate-500">Previous orders</p>
+                          <p className="text-slate-500">Minimum qty</p>
                           <p className="mt-1 font-semibold text-slate-200">{code.minimum_order_requirement ?? 0}</p>
                         </div>
                         <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
@@ -552,7 +552,7 @@ export default function PromoProductsSection() {
                     <TableHead className="text-slate-400">Code</TableHead>
                     <TableHead className="text-slate-400">Applies to Product</TableHead>
                     <TableHead className="text-slate-400">Creator</TableHead>
-                    <TableHead className="text-slate-400">Min Orders</TableHead>
+                    <TableHead className="text-slate-400">Min Qty</TableHead>
                     <TableHead className="text-slate-400">Uses</TableHead>
                     <TableHead className="text-slate-400">Revenue</TableHead>
                     <TableHead className="text-slate-400">Expiry</TableHead>
@@ -603,7 +603,7 @@ export default function PromoProductsSection() {
                           {code.minimum_order_requirement && code.minimum_order_requirement > 0
                             ? (
                               <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-300">
-                                {code.minimum_order_requirement} order{code.minimum_order_requirement !== 1 ? 's' : ''}
+                                {code.minimum_order_requirement} item{code.minimum_order_requirement !== 1 ? 's' : ''}
                               </Badge>
                             )
                             : <span className="text-slate-500">-</span>

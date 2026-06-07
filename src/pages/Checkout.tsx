@@ -84,6 +84,22 @@ const Checkout = () => {
       return isMatchingProduct ? sum + item.price * item.quantity : sum;
     }, 0);
   };
+  const getMatchingPromoQuantity = (promoProductName: string) => {
+    if (promoProductName.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase()) {
+      return totalItems;
+    }
+
+    const normalizedPromoProduct = normalizePromoMatchValue(promoProductName);
+
+    return items.reduce((sum, item) => {
+      const normalizedItemName = normalizePromoMatchValue(item.name);
+      const isMatchingProduct =
+        normalizedItemName.includes(normalizedPromoProduct) ||
+        normalizedPromoProduct.includes(normalizedItemName);
+
+      return isMatchingProduct ? sum + item.quantity : sum;
+    }, 0);
+  };
   const previewPromoDiscount = appliedPromoCode
     ? calculatePromoDiscount(getPromoDiscountBase(appliedPromoCode), appliedPromoCode.discountPercent)
     : 0;
@@ -162,7 +178,22 @@ const Checkout = () => {
       firstResult.message.toLowerCase().includes('only works for all products') &&
       items.length > 0;
 
-    if (!firstResult.valid && !isAllProductsCompatibilityMatch) {
+    const requiredQuantity = Number(firstResult.minimum_order_requirement ?? 0);
+    const matchingQuantity = firstResult.promo_product_name
+      ? getMatchingPromoQuantity(firstResult.promo_product_name)
+      : 0;
+
+    if (requiredQuantity > 0 && matchingQuantity < requiredQuantity) {
+      return {
+        valid: false,
+        message: `This code requires at least ${requiredQuantity} ${firstResult.promo_product_name ?? 'matching'} item(s) in your cart. You have ${matchingQuantity}.`,
+      };
+    }
+
+    const isOldPreviousOrderRequirementMessage =
+      firstResult.message.toLowerCase().includes('completed order');
+
+    if (!firstResult.valid && !isAllProductsCompatibilityMatch && !(isOldPreviousOrderRequirementMessage && matchingQuantity >= requiredQuantity)) {
       return {
         valid: false,
         message: firstResult.message,
