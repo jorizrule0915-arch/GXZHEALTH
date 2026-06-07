@@ -132,7 +132,12 @@ const Checkout = () => {
       };
     }
 
-    if (!firstResult.valid) {
+    const isAllProductsCompatibilityMatch =
+      firstResult.promo_product_name?.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase() &&
+      firstResult.message.toLowerCase().includes('only works for all products') &&
+      items.length > 0;
+
+    if (!firstResult.valid && !isAllProductsCompatibilityMatch) {
       return {
         valid: false,
         message: firstResult.message,
