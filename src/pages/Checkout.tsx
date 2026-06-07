@@ -41,6 +41,10 @@ function normalizePromoCode(value: string) {
   return value.toUpperCase().replace(/\s+/g, '').trim();
 }
 
+function calculatePromoDiscount(baseTotal: number, discountPercent: number) {
+  return Math.min(baseTotal, Number(((baseTotal * discountPercent) / 100).toFixed(2)));
+}
+
 const Checkout = () => {
   const location = useLocation();
   const { items, updateQuantity, removeItem, totalPrice, totalItems, addItem, clearCart } = useCart();
@@ -59,10 +63,11 @@ const Checkout = () => {
 
   const shippingCost = hasFreeShipping ? 0 : 10;
   const subtotal = totalPrice;
+  const preDiscountTotal = subtotal + shippingCost;
   const previewPromoDiscount = appliedPromoCode
-    ? Math.min(subtotal, Number(((subtotal * appliedPromoCode.discountPercent) / 100).toFixed(2)))
+    ? calculatePromoDiscount(preDiscountTotal, appliedPromoCode.discountPercent)
     : 0;
-  const orderTotal = Math.max(subtotal + shippingCost - previewPromoDiscount, 0);
+  const orderTotal = Math.max(preDiscountTotal - previewPromoDiscount, 0);
 
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
@@ -345,7 +350,7 @@ const Checkout = () => {
     }
 
     const promoDiscountAmount = promoForOrder
-      ? Math.min(subtotal, Number(((subtotal * promoForOrder.discountPercent) / 100).toFixed(2)))
+      ? calculatePromoDiscount(subtotal + shippingCost, promoForOrder.discountPercent)
       : 0;
 
     const finalOrderTotal = Math.max(subtotal + shippingCost - promoDiscountAmount, 0);
