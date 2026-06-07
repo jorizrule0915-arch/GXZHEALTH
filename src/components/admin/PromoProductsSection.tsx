@@ -12,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 type PromoProductRow = Tables<'promo_products'>;
 type PromoCodeRow = Tables<'promo_codes'>;
-type ProductRow = Tables<'products'>;
 type PromoProductInsert = TablesInsert<'promo_products'>;
 type PromoCodeInsert = TablesInsert<'promo_codes'>;
 
@@ -50,7 +49,6 @@ export default function PromoProductsSection() {
   const { toast } = useToast();
   const [promoProducts, setPromoProducts] = useState<PromoProductRow[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCodeRow[]>([]);
-  const [catalogProducts, setCatalogProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingCodeId, setDeletingCodeId] = useState<string | null>(null);
@@ -60,20 +58,15 @@ export default function PromoProductsSection() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: products, error: pe }, { data: codes, error: ce }, { data: catalog, error: catalogError }] = await Promise.all([
+    const [{ data: products, error: pe }, { data: codes, error: ce }] = await Promise.all([
       supabase.from('promo_products').select('*').order('created_at', { ascending: true }),
       supabase.from('promo_codes').select('*').order('created_at', { ascending: false }),
-      supabase.from('products').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
     ]);
     setLoading(false);
     if (pe) { toast({ title: 'Unable to load products', description: pe.message, variant: 'destructive' }); return; }
     if (ce) { toast({ title: 'Unable to load codes', description: ce.message, variant: 'destructive' }); return; }
-    if (catalogError) {
-      toast({ title: 'Unable to load catalog products', description: catalogError.message, variant: 'destructive' });
-    }
     setPromoProducts(products ?? []);
     setPromoCodes(codes ?? []);
-    setCatalogProducts(catalog ?? []);
   };
 
   useEffect(() => { void load(); }, []);
@@ -92,14 +85,13 @@ export default function PromoProductsSection() {
   const productSuggestions = useMemo(() => {
     const names = new Map<string, string>();
     names.set(ALL_PRODUCTS_NAME.toLowerCase(), ALL_PRODUCTS_NAME);
-    catalogProducts.forEach((product) => names.set(product.name.toLowerCase(), product.name));
     promoProducts.forEach((product) => names.set(product.name.toLowerCase(), product.name));
     return [...names.values()].sort((left, right) => {
       if (left === ALL_PRODUCTS_NAME) return -1;
       if (right === ALL_PRODUCTS_NAME) return 1;
       return left.localeCompare(right);
     });
-  }, [catalogProducts, promoProducts]);
+  }, [promoProducts]);
 
   const saveVoucher = async () => {
     const normalizedCode = normalizeCode(form.code);
@@ -107,9 +99,6 @@ export default function PromoProductsSection() {
 
     if (!normalizedCode) {
       toast({ title: 'Voucher code is required', variant: 'destructive' }); return;
-    }
-    if (!productName) {
-      toast({ title: 'Product name is required', description: 'This tells the system which product the code applies to.', variant: 'destructive' }); return;
     }
     if (!form.influencerName.trim()) {
       toast({ title: 'Creator / label name is required', variant: 'destructive' }); return;
@@ -132,7 +121,7 @@ export default function PromoProductsSection() {
     setSaving(true);
 
     // 1. Find or create the promo product by name (case-insensitive match)
-    const isAllProductsVoucher = productName.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase();
+    const isAllProductsVoucher = !productName || productName.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase();
     let product = promoProducts.find((p) => (
       isAllProductsVoucher
         ? p.sku === ALL_PRODUCTS_SKU || p.name.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase()
@@ -267,7 +256,7 @@ export default function PromoProductsSection() {
             {/* Product name lock */}
             <div className="space-y-2">
               <Label htmlFor="vc-product" className="text-slate-200">
-                Applies to Product <span className="text-red-400">*</span>
+                Applies to Product
               </Label>
 
               {productSuggestions.length > 0 && (
@@ -292,7 +281,7 @@ export default function PromoProductsSection() {
               <Input
                 id="vc-product"
                 list="promo-product-suggestions"
-                placeholder="Choose All Products or a specific product"
+                placeholder="Leave blank for all products"
                 value={form.productName}
                 onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
                 className="border-slate-700 bg-slate-800/70 text-white placeholder:text-slate-500"
@@ -303,7 +292,7 @@ export default function PromoProductsSection() {
                 ))}
               </datalist>
               <p className="text-xs text-slate-500">
-                Choose All Products for a sitewide code. For product-only codes, click the exact storefront product.
+                Leave blank or choose All Products for a sitewide code. Type a product name only when the voucher should be locked to that product.
               </p>
             </div>
 
@@ -385,7 +374,7 @@ export default function PromoProductsSection() {
                   {form.discountPercent && <span className="text-emerald-300"> ({form.discountPercent}% off)</span>}
                   {' '}will activate for{' '}
                   <span className="font-semibold text-white">
-                    {form.productName.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase()
+                    {!form.productName.trim() || form.productName.toLowerCase() === ALL_PRODUCTS_NAME.toLowerCase()
                       ? 'all products'
                       : `"${form.productName || '-'}" only`}
                   </span>.
