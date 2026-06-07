@@ -41,6 +41,10 @@ function normalizePromoCode(value: string) {
   return value.toUpperCase().replace(/\s+/g, '').trim();
 }
 
+function normalizePromoMatchValue(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
 function calculatePromoDiscount(baseTotal: number, discountPercent: number) {
   return Math.min(baseTotal, Number(((baseTotal * discountPercent) / 100).toFixed(2)));
 }
@@ -64,8 +68,24 @@ const Checkout = () => {
   const shippingCost = hasFreeShipping ? 0 : 10;
   const subtotal = totalPrice;
   const preDiscountTotal = subtotal + shippingCost;
+  const getPromoDiscountBase = (promo: AppliedPromoCode) => {
+    if (promo.promoProductName.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase()) {
+      return preDiscountTotal;
+    }
+
+    const normalizedPromoProduct = normalizePromoMatchValue(promo.promoProductName);
+
+    return items.reduce((sum, item) => {
+      const normalizedItemName = normalizePromoMatchValue(item.name);
+      const isMatchingProduct =
+        normalizedItemName.includes(normalizedPromoProduct) ||
+        normalizedPromoProduct.includes(normalizedItemName);
+
+      return isMatchingProduct ? sum + item.price * item.quantity : sum;
+    }, 0);
+  };
   const previewPromoDiscount = appliedPromoCode
-    ? calculatePromoDiscount(preDiscountTotal, appliedPromoCode.discountPercent)
+    ? calculatePromoDiscount(getPromoDiscountBase(appliedPromoCode), appliedPromoCode.discountPercent)
     : 0;
   const orderTotal = Math.max(preDiscountTotal - previewPromoDiscount, 0);
 
@@ -302,9 +322,11 @@ const Checkout = () => {
       return;
     }
 
-    const stillHasAssignedProduct = items.some((item) =>
-      item.name.toLowerCase().includes(appliedPromoCode.promoProductName.toLowerCase())
-    );
+    const normalizedPromoProduct = normalizePromoMatchValue(appliedPromoCode.promoProductName);
+    const stillHasAssignedProduct = items.some((item) => {
+      const normalizedItemName = normalizePromoMatchValue(item.name);
+      return normalizedItemName.includes(normalizedPromoProduct) || normalizedPromoProduct.includes(normalizedItemName);
+    });
 
     if (stillHasAssignedProduct) {
       return;
@@ -350,7 +372,7 @@ const Checkout = () => {
     }
 
     const promoDiscountAmount = promoForOrder
-      ? calculatePromoDiscount(subtotal + shippingCost, promoForOrder.discountPercent)
+      ? calculatePromoDiscount(getPromoDiscountBase(promoForOrder), promoForOrder.discountPercent)
       : 0;
 
     const finalOrderTotal = Math.max(subtotal + shippingCost - promoDiscountAmount, 0);
