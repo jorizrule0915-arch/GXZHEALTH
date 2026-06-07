@@ -147,9 +147,10 @@ const Checkout = () => {
       customer_email: customerInfo.email.trim().toLowerCase(),
     });
 
+    const errorMessage = error?.message?.toLowerCase() ?? '';
     const canRetryWithoutEmail =
-      error?.message?.toLowerCase().includes('validate_promo_code') &&
-      error.message.toLowerCase().includes('customer_email');
+      errorMessage.includes('customer_email') ||
+      (errorMessage.includes('validate_promo_code') && errorMessage.includes('ambiguous'));
 
     if (canRetryWithoutEmail) {
       const retry = await supabase.rpc('validate_promo_code', validationArgs);
