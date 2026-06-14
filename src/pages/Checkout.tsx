@@ -49,6 +49,16 @@ function calculatePromoDiscount(baseTotal: number, discountPercent: number) {
   return Math.min(baseTotal, Number(((baseTotal * discountPercent) / 100).toFixed(2)));
 }
 
+function getOrderSaveErrorMessage(error: { message?: string }) {
+  const message = error.message ?? 'Something went wrong while saving your order.';
+
+  if (message.toLowerCase().includes('failed to fetch')) {
+    return 'Checkout backend is unreachable. Please check that VITE_SUPABASE_URL points to an active Supabase project and redeploy the site.';
+  }
+
+  return message;
+}
+
 const Checkout = () => {
   const location = useLocation();
   const { items, updateQuantity, removeItem, totalPrice, totalItems, addItem, clearCart } = useCart();
@@ -649,7 +659,7 @@ const Checkout = () => {
       console.error('Error saving order:', error);
       toast({
         title: 'Order error',
-        description: error.message,
+        description: getOrderSaveErrorMessage(error),
         variant: 'destructive',
       });
       return;
