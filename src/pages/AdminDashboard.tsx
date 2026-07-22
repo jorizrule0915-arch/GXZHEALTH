@@ -50,6 +50,7 @@ type ProductInsert = TablesInsert<'products'>;
 
 interface OrderItem {
   name: string;
+  selectedOptionLabel?: string;
   price: number;
   quantity: number;
   total: number;
@@ -1339,7 +1340,7 @@ export default function AdminDashboard() {
                                   <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-4 text-sm">
                                     <div className="text-slate-300">
                                       <span className="mr-2 text-slate-500">×{item.quantity}</span>
-                                      {item.name}
+                                      <span>{item.name}{item.selectedOptionLabel ? ` (${item.selectedOptionLabel})` : ''}</span>
                                     </div>
                                     <span className="shrink-0 font-semibold text-emerald-300">
                                       {formatCurrency(Number(item.total ?? item.price * item.quantity))}
@@ -1558,7 +1559,7 @@ export default function AdminDashboard() {
                                             <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-4 text-sm">
                                               <div className="text-slate-300">
                                                 <span className="mr-2 text-slate-500">×{item.quantity}</span>
-                                                {item.name}
+                                                <span>{item.name}{item.selectedOptionLabel ? ` (${item.selectedOptionLabel})` : ''}</span>
                                               </div>
                                               <span className="shrink-0 font-semibold text-emerald-300">
                                                 {formatCurrency(Number(item.total ?? item.price * item.quantity))}

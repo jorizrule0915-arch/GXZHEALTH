@@ -59,6 +59,67 @@ function getOrderSaveErrorMessage(error: { message?: string }) {
   return message;
 }
 
+function decodeExternalText(value: unknown) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .replace(/&#8211;|&#x2013;/gi, '-')
+    .replace(/&#8212;|&#x2014;/gi, '-')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;|&#39;/gi, "'")
+    .trim();
+}
+
+function getExternalOptionLabel(item: Record<string, unknown>) {
+  const directCandidates = [
+    item.selectedOptionLabel,
+    item.size,
+    item.vialSize,
+    item.vial_size,
+    item.option,
+    item.variant,
+    item.variation,
+  ];
+
+  for (const candidate of directCandidates) {
+    const label = decodeExternalText(candidate);
+    if (label) {
+      return label;
+    }
+  }
+
+  const collections = [item.attributes, item.variation, item.variations, item.meta_data];
+  const labels: string[] = [];
+
+  for (const collection of collections) {
+    if (Array.isArray(collection)) {
+      for (const entry of collection) {
+        if (!entry || typeof entry !== 'object') continue;
+        const attribute = entry as Record<string, unknown>;
+        const key = decodeExternalText(attribute.name ?? attribute.attribute ?? attribute.key ?? attribute.label);
+        const value = decodeExternalText(attribute.option ?? attribute.value ?? attribute.display_value);
+
+        if (value && (!key || /size|vial|strength|dose|mg|ml/i.test(key))) {
+          labels.push(key && !/^(size|vial size)$/i.test(key) ? `${key}: ${value}` : value);
+        }
+      }
+    } else if (collection && typeof collection === 'object') {
+      for (const [rawKey, rawValue] of Object.entries(collection)) {
+        const key = decodeExternalText(rawKey.replace(/^attribute_/, '').replace(/^pa_/, '').replace(/[-_]+/g, ' '));
+        const value = decodeExternalText(rawValue);
+        if (value && /size|vial|strength|dose|mg|ml/i.test(key)) {
+          labels.push(key && !/^(size|vial size)$/i.test(key) ? `${key}: ${value}` : value);
+        }
+      }
+    }
+  }
+
+  return [...new Set(labels)].join(' / ');
+}
+
 const Checkout = () => {
   const location = useLocation();
   const { items, updateQuantity, removeItem, totalPrice, totalItems, addItem, clearCart } = useCart();
@@ -495,24 +556,29 @@ const Checkout = () => {
 
         clearCart();
 
-        decoded.items.forEach((item: any, index: number) => {
-          const cleanName = item.name
-            .replace(/&#8211;/g, '-')
-            .replace(/&amp;/g, '&');
+        decoded.items.forEach((item: Record<string, unknown>, index: number) => {
+          const cleanName = decodeExternalText(item.name);
+          const optionLabel = getExternalOptionLabel(item);
+          const cartId = `${index}-${cleanName}-${optionLabel}`;
+          const price = Number(item.price ?? 0);
+          const image = typeof item.image === 'string' && item.image ? item.image : '/placeholder.png';
+          const quantity = Math.max(1, Math.floor(Number(item.quantity ?? 1)) || 1);
 
           addItem({
-            id: `${index}-${cleanName}`,
+            id: cartId,
             name: cleanName,
-            price: item.price,
-            image: item.image || '/placeholder.png',
+            price,
+            image,
+            option: optionLabel || undefined,
           });
 
-          for (let i = 1; i < item.quantity; i++) {
+          for (let i = 1; i < quantity; i++) {
             addItem({
-              id: `${index}-${cleanName}`,
+              id: cartId,
               name: cleanName,
-              price: item.price,
-              image: item.image || '/placeholder.png',
+              price,
+              image,
+              option: optionLabel || undefined,
             });
           }
         });
@@ -619,6 +685,7 @@ const Checkout = () => {
     const orderData = {
       items: items.map((item) => ({
         name: item.name,
+        selectedOptionLabel: item.option,
         price: item.price,
         quantity: item.quantity,
         total: item.price * item.quantity,
@@ -798,6 +865,7 @@ const Checkout = () => {
                           />
                           <div className="flex-1">
                             <h3 className="font-medium">{item.name}</h3>
+                            {item.option && <p className="mt-1 text-sm text-muted-foreground">Size: {item.option}</p>}
                             <p className="text-secondary font-semibold mt-1">
                               ${item.price.toFixed(2)} USD each
                             </p>

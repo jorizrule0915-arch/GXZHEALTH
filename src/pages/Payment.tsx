@@ -28,6 +28,7 @@ import RecaptchaWidget from '@/components/RecaptchaWidget';
 
 interface OrderItem {
   name: string;
+  selectedOptionLabel?: string;
   price: number;
   quantity: number;
   total: number;
@@ -808,6 +809,7 @@ const Payment = () => {
                           <div key={`${item.name}-${index}`} className="flex items-start justify-between gap-4 rounded-[20px] border border-border/60 bg-background/80 px-4 py-3">
                             <div className="min-w-0">
                               <p className="truncate font-medium text-foreground">{item.name}</p>
+                              {item.selectedOptionLabel && <p className="text-xs text-muted-foreground">Size: {item.selectedOptionLabel}</p>}
                               <p className="text-sm text-muted-foreground">
                                 {item.quantity} x ${item.price.toFixed(2)}
                               </p>

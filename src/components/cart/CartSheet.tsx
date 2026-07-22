@@ -37,6 +37,7 @@ const CartSheet = () => {
                   />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                    {item.option && <p className="mt-0.5 text-xs text-muted-foreground">Size: {item.option}</p>}
                     <p className="text-secondary font-semibold mt-1">
                       ${item.price.toFixed(2)}
                     </p>
