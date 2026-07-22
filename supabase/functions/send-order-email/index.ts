@@ -173,7 +173,7 @@ Deno.serve(async (req: Request) => {
       `<tr>
         <td style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
           <div style="color: #0f172a; font-size: 15px; font-weight: 700;">${escapeHtml(item.name)}</div>
-          ${item.selectedOptionLabel ? `<div style="margin-top: 4px; color: #64748b; font-size: 13px;">Option: ${escapeHtml(item.selectedOptionLabel)}</div>` : ''}
+          ${item.selectedOptionLabel ? `<div style="margin-top: 5px; color: #2563eb; font-size: 13px; font-weight: 700;">Vial size / strength: ${escapeHtml(item.selectedOptionLabel)}</div>` : ''}
         </td>
         <td style="padding: 16px; border-bottom: 1px solid #e2e8f0; text-align: center; color: #0f172a; font-size: 14px; font-weight: 600;">${Number(item.quantity ?? 0)}</td>
         <td style="padding: 16px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #0f172a; font-size: 14px; font-weight: 700;">${formatCurrency(Number(item.total ?? 0))}</td>

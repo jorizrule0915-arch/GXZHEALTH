@@ -1338,9 +1338,14 @@ export default function AdminDashboard() {
                               <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
                                 {order.items.map((item, index) => (
                                   <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-4 text-sm">
-                                    <div className="text-slate-300">
+                                    <div className="min-w-0 text-slate-300">
                                       <span className="mr-2 text-slate-500">×{item.quantity}</span>
-                                      <span>{item.name}{item.selectedOptionLabel ? ` (${item.selectedOptionLabel})` : ''}</span>
+                                      <span>{item.name}</span>
+                                      {item.selectedOptionLabel && (
+                                        <p className="ml-6 mt-1 text-xs font-semibold text-blue-300">
+                                          Vial size / strength: {item.selectedOptionLabel}
+                                        </p>
+                                      )}
                                     </div>
                                     <span className="shrink-0 font-semibold text-emerald-300">
                                       {formatCurrency(Number(item.total ?? item.price * item.quantity))}
@@ -1557,9 +1562,14 @@ export default function AdminDashboard() {
                                         <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
                                           {order.items.map((item, index) => (
                                             <div key={`${item.name}-${index}`} className="flex items-center justify-between gap-4 text-sm">
-                                              <div className="text-slate-300">
+                                              <div className="min-w-0 text-slate-300">
                                                 <span className="mr-2 text-slate-500">×{item.quantity}</span>
-                                                <span>{item.name}{item.selectedOptionLabel ? ` (${item.selectedOptionLabel})` : ''}</span>
+                                                <span>{item.name}</span>
+                                                {item.selectedOptionLabel && (
+                                                  <p className="ml-6 mt-1 text-xs font-semibold text-blue-300">
+                                                    Vial size / strength: {item.selectedOptionLabel}
+                                                  </p>
+                                                )}
                                               </div>
                                               <span className="shrink-0 font-semibold text-emerald-300">
                                                 {formatCurrency(Number(item.total ?? item.price * item.quantity))}

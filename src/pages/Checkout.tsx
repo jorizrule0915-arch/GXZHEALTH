@@ -74,11 +74,25 @@ function decodeExternalText(value: unknown) {
 }
 
 function getExternalOptionLabel(item: Record<string, unknown>) {
+  const rawMilligrams = typeof item.mg === 'string' || typeof item.mg === 'number' ? String(item.mg).trim() : '';
+  const rawMilliliters = typeof item.ml === 'string' || typeof item.ml === 'number' ? String(item.ml).trim() : '';
+  const milligrams = rawMilligrams
+    ? /mg$/i.test(rawMilligrams) ? rawMilligrams : `${rawMilligrams} mg`
+    : '';
+  const milliliters = rawMilliliters
+    ? /ml$/i.test(rawMilliliters) ? rawMilliliters : `${rawMilliliters} mL`
+    : '';
   const directCandidates = [
     item.selectedOptionLabel,
     item.size,
     item.vialSize,
     item.vial_size,
+    item.strength,
+    item.dose,
+    item.dosage,
+    item.volume,
+    milligrams,
+    milliliters,
     item.option,
     item.variant,
     item.variation,
@@ -91,7 +105,15 @@ function getExternalOptionLabel(item: Record<string, unknown>) {
     }
   }
 
-  const collections = [item.attributes, item.variation, item.variations, item.meta_data];
+  const collections = [
+    item.attributes,
+    item.variation,
+    item.variations,
+    item.variation_data,
+    item.variation_attributes,
+    item.product_variation,
+    item.meta_data,
+  ];
   const labels: string[] = [];
 
   for (const collection of collections) {
