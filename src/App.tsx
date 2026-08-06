@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import CartSheet from "@/components/cart/CartSheet";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import About from "./pages/About";
@@ -42,6 +43,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
         <Analytics />
+        <SpeedInsights />
       </CartProvider>
     </TooltipProvider>
   </QueryClientProvider>
