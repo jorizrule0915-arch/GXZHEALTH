@@ -708,6 +708,7 @@ const Checkout = () => {
       items: items.map((item) => ({
         name: item.name,
         selectedOptionLabel: item.option,
+        image: item.image,
         price: item.price,
         quantity: item.quantity,
         total: item.price * item.quantity,
