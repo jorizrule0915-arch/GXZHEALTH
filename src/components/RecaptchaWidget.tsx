@@ -32,7 +32,9 @@ declare global {
 
 let recaptchaScriptPromise: Promise<void> | null = null;
 
-function loadRecaptchaScript() {
+// Shared with the payment page so Google can load before the widget dialog opens.
+// eslint-disable-next-line react-refresh/only-export-components
+export function preloadRecaptcha() {
   if (typeof window === 'undefined') {
     return Promise.resolve();
   }
@@ -88,7 +90,7 @@ export default function RecaptchaWidget({
     let cancelled = false;
     setLoadError(null);
 
-    loadRecaptchaScript()
+    preloadRecaptcha()
       .then(() => {
         if (cancelled || !containerRef.current || !window.grecaptcha || widgetIdRef.current !== null) {
           return;

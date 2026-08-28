@@ -14,6 +14,17 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 async function verifyRecaptchaToken(token: string, remoteIp: string | null) {
   if (!RECAPTCHA_SECRET_KEY) {
     throw new Error('Missing RECAPTCHA_SECRET_KEY')
@@ -28,13 +39,13 @@ async function verifyRecaptchaToken(token: string, remoteIp: string | null) {
     body.set('remoteip', remoteIp)
   }
 
-  const verificationResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+  const verificationResponse = await fetchWithTimeout('https://www.google.com/recaptcha/api/siteverify', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: body.toString(),
-  })
+  }, 8000)
 
   const verificationResult = await verificationResponse.json()
 
@@ -479,7 +490,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('📤 Sending to Resend API...')
     
-    const resendResponse = await fetch('https://api.resend.com/emails', {
+    const adminEmailRequest = fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -491,7 +502,26 @@ Deno.serve(async (req: Request) => {
         subject: `New Order ${orderNumber} from ${orderData.customer.name}`,
         html: emailHtml
       })
-    })
+    }, 12000)
+
+    const customerEmailRequest = canEmailCustomer
+      ? fetchWithTimeout('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'orders@gxzhealth.com',
+          to: [customerEmailRaw],
+          subject: `GXZ Health order confirmation ${orderNumber}`,
+          html: customerEmailHtml
+        })
+      }, 12000)
+      : Promise.resolve(null)
+
+    const [resendResponse, customerResendResponse] = await Promise.all([adminEmailRequest, customerEmailRequest])
+    let customerResponseData = null
 
     console.log('📨 Resend HTTP Status:', resendResponse.status)
     const responseData = await resendResponse.json()
@@ -510,25 +540,10 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log('✅ Email sent successfully!')
-    let customerResponseData = null
-
     if (canEmailCustomer) {
       console.log('Sending customer confirmation email...')
 
-      const customerResendResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${RESEND_API_KEY}`
-        },
-        body: JSON.stringify({
-          from: 'orders@gxzhealth.com',
-          to: [customerEmailRaw],
-          subject: `GXZ Health order confirmation ${orderNumber}`,
-          html: customerEmailHtml
-        })
-      })
-
+      if (!customerResendResponse) throw new Error('Customer email response missing')
       console.log('Customer Resend HTTP Status:', customerResendResponse.status)
       customerResponseData = await customerResendResponse.json()
       console.log('Customer Resend Response:', JSON.stringify(customerResponseData, null, 2))

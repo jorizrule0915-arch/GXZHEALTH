@@ -24,7 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import RecaptchaWidget from '@/components/RecaptchaWidget';
+import RecaptchaWidget, { preloadRecaptcha } from '@/components/RecaptchaWidget';
 
 interface OrderItem {
   name: string;
@@ -174,6 +174,12 @@ const Payment = () => {
   const [contactCaptchaToken, setContactCaptchaToken] = useState<string | null>(null);
   const [paymentCaptchaResetKey, setPaymentCaptchaResetKey] = useState(0);
   const [contactCaptchaResetKey, setContactCaptchaResetKey] = useState(0);
+
+  useEffect(() => {
+    void preloadRecaptcha().catch(() => {
+      // The widget will show the actionable error if Google remains unavailable.
+    });
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -930,6 +936,9 @@ const Payment = () => {
                       onVerify={setPaymentCaptchaToken}
                       resetKey={paymentCaptchaResetKey}
                     />
+                    {paymentCaptchaToken && (
+                      <p className="text-sm font-semibold text-emerald-600">Security verified. Ready to send.</p>
+                    )}
                   </div>
                 </div>
 
@@ -948,7 +957,7 @@ const Payment = () => {
                         !paymentCaptchaToken
                       }
                     >
-                      {isSubmittingProof ? 'Submitting proof...' : 'Done Paying'}
+                      {isSubmittingProof ? 'Sending order and emails...' : 'Done Paying'}
                       {!isSubmittingProof && <ArrowRight className="ml-2 h-4 w-4" />}
                     </Button>
                   </div>
@@ -1057,6 +1066,9 @@ const Payment = () => {
                       onVerify={setContactCaptchaToken}
                       resetKey={contactCaptchaResetKey}
                     />
+                    {contactCaptchaToken && (
+                      <p className="text-sm font-semibold text-emerald-600">Security verified. Ready to send.</p>
+                    )}
                   </div>
                 </div>
 
