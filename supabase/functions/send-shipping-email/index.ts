@@ -6,6 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+// Keep shipping notifications aligned with the existing order-confirmation
+// recipients. BCC prevents exposing internal GXZ addresses to customers.
+const adminRecipients = [
+  'jorizrule0@gmail.com',
+  'g@gxzhealth.com',
+  'g@gxzpeptides.com',
+  'jorizrule0915@gmail.com',
+]
+
 const escapeHtml = (value: unknown) => String(value ?? '')
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
   .replaceAll('"', '&quot;').replaceAll("'", '&#39;')
@@ -44,6 +53,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: 'GXZ Health <orders@gxzhealth.com>',
         to: [order.customer_email],
+        bcc: adminRecipients,
         subject: `Your GXZ Health order ${order.order_number} has shipped`,
         html: `<div style="background:#f4f7f6;padding:40px 16px;font-family:Arial,sans-serif;color:#13231f"><div style="max-width:600px;margin:auto;background:white;border-radius:18px;overflow:hidden"><div style="padding:28px;background:#103f35;color:white"><div style="font-size:22px;font-weight:800">GXZ Health</div><div style="margin-top:8px;color:#cde7de">Your order is on the way</div></div><div style="padding:32px"><p>Hi ${escapeHtml(order.customer_name || 'there')},</p><p style="line-height:1.7;color:#52605c">Your order <strong>${escapeHtml(order.order_number)}</strong> has a new ${escapeHtml(carrier)} shipping update.</p><div style="background:#f3f7f5;padding:18px;border-radius:12px;margin:24px 0"><div style="font-size:12px;color:#73817d;text-transform:uppercase;letter-spacing:.08em">Latest update</div><div style="font-size:18px;font-weight:800;margin-top:8px;color:#145844">${escapeHtml(shipmentStatus || 'In transit')}</div>${latestUpdate ? `<p style="line-height:1.6;color:#52605c">${escapeHtml(latestUpdate)}</p>` : ''}${shipmentLocation ? `<div style="font-weight:700">${escapeHtml(shipmentLocation)}</div>` : ''}${eventDate ? `<div style="margin-top:5px;color:#73817d;font-size:13px">${escapeHtml(new Date(eventDate).toLocaleString('en-US'))}</div>` : ''}<div style="font-size:12px;color:#73817d;text-transform:uppercase;letter-spacing:.08em;margin-top:18px">Tracking number</div><div style="font-size:17px;font-weight:700;margin-top:7px">${escapeHtml(trackingNumber)}</div></div><a href="${link}" style="display:inline-block;background:#145844;color:white;text-decoration:none;padding:14px 24px;border-radius:9px;font-weight:700">Track My Order</a><p style="margin-top:28px;font-size:12px;color:#89938f">You’ll only receive updates at major shipping milestones.</p></div></div></div>`,
       }),
