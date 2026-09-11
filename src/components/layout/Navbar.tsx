@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Beaker } from "lucide-react";
+import { Menu, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import CartButton from "@/components/cart/CartButton";
@@ -9,6 +9,10 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const storefrontUrl = "https://gxzhealthandwellness.com";
+  const isCheckoutFlow = ["/checkout", "/payment"].includes(
+    location.pathname,
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,6 +34,31 @@ const Navbar = () => {
 
   const isHomePage = location.pathname === "/";
   const shouldShowBackground = isScrolled || !isHomePage;
+
+  if (isCheckoutFlow) {
+    return (
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-white/95 py-3 shadow-sm backdrop-blur-xl dark:bg-background/95">
+        <div className="container mx-auto flex items-center justify-between px-4 sm:px-6">
+          <a
+            href={storefrontUrl}
+            aria-label="Return to GXZ Health and Wellness"
+            className="flex items-center"
+          >
+            <img
+              src="/gxz-peptides-logo.png"
+              alt="GXZ Peptides Logo"
+              className="h-11 w-auto max-w-[160px] rounded-lg bg-white px-2 object-contain sm:h-12 sm:max-w-[180px]"
+            />
+          </a>
+
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground sm:text-sm">
+            <ShieldCheck className="h-4 w-4 text-secondary sm:h-5 sm:w-5" />
+            <span>Secure checkout</span>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav
