@@ -100,7 +100,7 @@ Deno.serve(async (req: Request) => {
     
     const { orderData, paymentMethod, paymentProof, recaptchaToken } = await req.json()
     const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
-    const siteUrl = req.headers.get('origin') || 'https://health.gxzhealth.com'
+    const siteUrl = Deno.env.get('PUBLIC_SITE_URL') || req.headers.get('origin') || 'https://pep.gxzpeptides.com'
 
     if (!recaptchaToken || !(await verifyRecaptchaToken(recaptchaToken, remoteIp))) {
       return new Response(JSON.stringify({
@@ -192,8 +192,8 @@ Deno.serve(async (req: Request) => {
     ).join('')
 
     const customerIntro = paymentProof
-      ? 'We received your order and payment details. The GXZ Health team will manually review your payment before moving the order forward.'
-      : 'We received your order and payment request. The GXZ Health team will contact you with the next steps for your selected payment method.'
+      ? 'We received your order and payment details. The GXZ Peptides team will manually review your payment before moving the order forward.'
+      : 'We received your order and payment request. The GXZ Peptides team will contact you with the next steps for your selected payment method.'
 
     const customerEmailHtml = `
       <!DOCTYPE html>
@@ -209,7 +209,7 @@ Deno.serve(async (req: Request) => {
               <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; background-color: #ffffff; border: 1px solid #dbeafe; border-radius: 28px; overflow: hidden; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.10);">
                 <tr>
                   <td style="background: linear-gradient(135deg, #2563eb 0%, #0f172a 100%); padding: 34px 30px 30px 30px;">
-                    <p style="margin: 0 0 10px 0; color: #bfdbfe; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800;">GXZ Health</p>
+                    <p style="margin: 0 0 10px 0; color: #bfdbfe; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800;">GXZ Peptides</p>
                     <h1 style="color: #ffffff; margin: 0; font-size: 30px; line-height: 1.15; font-weight: 800;">Your order details</h1>
                     <p style="color: #dbeafe; margin: 12px 0 0 0; font-size: 15px; line-height: 1.7;">${customerIntro}</p>
                   </td>
@@ -303,7 +303,7 @@ Deno.serve(async (req: Request) => {
 
                 <tr>
                   <td style="background: #f8fafc; padding: 24px 30px 30px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">Thank you for ordering from GXZ Health.</p>
+                    <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">Thank you for ordering from GXZ Peptides.</p>
                     <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.7;">This confirmation was sent automatically after your payment method was selected on the website.</p>
                   </td>
                 </tr>
@@ -333,7 +333,7 @@ Deno.serve(async (req: Request) => {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align: top;">
-                          <p style="margin: 0 0 10px 0; color: #bfdbfe; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800;">GXZ Health Order Desk</p>
+                          <p style="margin: 0 0 10px 0; color: #bfdbfe; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800;">GXZ Peptides Order Desk</p>
                           <h1 style="color: #ffffff; margin: 0; font-size: 30px; line-height: 1.1; font-weight: 800;">New order received</h1>
                           <p style="color: #dbeafe; margin: 10px 0 0 0; font-size: 15px; line-height: 1.7;">A fresh order just came through the store. Review the customer details, shipping fee, and total below.</p>
                         </td>
@@ -476,7 +476,7 @@ Deno.serve(async (req: Request) => {
                 
                 <tr>
                   <td style="background: #f8fafc; padding: 24px 30px 30px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">GXZ Health order notification</p>
+                    <p style="color: #475569; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">GXZ Peptides order notification</p>
                     <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.7;">This email was sent automatically when a customer completed checkout or submitted payment details on your website.</p>
                   </td>
                 </tr>
@@ -497,8 +497,8 @@ Deno.serve(async (req: Request) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'orders@gxzhealth.com',
-        to: ['jorizrule0@gmail.com', 'g@gxzhealth.com', 'g@gxzpeptides.com', 'jorizrule0915@gmail.com'],
+        from: 'orders@gxzpeptides.com',
+        to: ['jorizrule0@gmail.com', 'g@gxzpeptides.com', 'jorizrule0915@gmail.com'],
         subject: `New Order ${orderNumber} from ${orderData.customer.name}`,
         html: emailHtml
       })
@@ -512,9 +512,9 @@ Deno.serve(async (req: Request) => {
           'Authorization': `Bearer ${RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: 'orders@gxzhealth.com',
+          from: 'orders@gxzpeptides.com',
           to: [customerEmailRaw],
-          subject: `GXZ Health order confirmation ${orderNumber}`,
+          subject: `GXZ Peptides order confirmation ${orderNumber}`,
           html: customerEmailHtml
         })
       }, 12000)

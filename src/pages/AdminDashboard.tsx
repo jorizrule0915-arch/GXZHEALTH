@@ -74,6 +74,8 @@ type Order = {
   latestUpdate?: string;
   shipmentLocation?: string;
   eventDate?: string;
+  sourceStore?: string;
+  productUrl?: string;
 };
 
 const seedOrders: Order[] = [
@@ -155,7 +157,15 @@ const seedOrders: Order[] = [
   },
 ];
 
-type StoredShipping = Pick<Order, "carrier" | "tracking" | "shipmentStatus" | "latestUpdate" | "shipmentLocation" | "eventDate">;
+type StoredShipping = Pick<
+  Order,
+  | "carrier"
+  | "tracking"
+  | "shipmentStatus"
+  | "latestUpdate"
+  | "shipmentLocation"
+  | "eventDate"
+>;
 
 function readShipping(): Record<string, StoredShipping> {
   try {
@@ -253,7 +263,8 @@ export default function AdminDashboard() {
   const [mobileNav, setMobileNav] = useState(false);
   const [carrier, setCarrier] = useState("");
   const [tracking, setTracking] = useState("");
-  const [shipmentStatus, setShipmentStatus] = useState<ShipmentStatus>("Awaiting tracking");
+  const [shipmentStatus, setShipmentStatus] =
+    useState<ShipmentStatus>("Awaiting tracking");
   const [latestUpdate, setLatestUpdate] = useState("");
   const [shipmentLocation, setShipmentLocation] = useState("");
   const [eventDate, setEventDate] = useState("");
@@ -359,6 +370,14 @@ export default function AdminDashboard() {
             latestUpdate: saved?.latestUpdate ?? "",
             shipmentLocation: saved?.shipmentLocation ?? "",
             eventDate: saved?.eventDate ?? "",
+            sourceStore:
+              typeof item?.sourceStore === "string"
+                ? item.sourceStore
+                : undefined,
+            productUrl:
+              typeof item?.productUrl === "string"
+                ? item.productUrl
+                : undefined,
             _databaseId: row.id,
           } as Order & { _databaseId: string };
         });
@@ -406,7 +425,15 @@ export default function AdminDashboard() {
     const { data, error } = await supabase.functions.invoke(
       "send-shipping-email",
       {
-        body: { orderId: databaseId, carrier, trackingNumber: tracking.trim(), shipmentStatus, latestUpdate, shipmentLocation, eventDate },
+        body: {
+          orderId: databaseId,
+          carrier,
+          trackingNumber: tracking.trim(),
+          shipmentStatus,
+          latestUpdate,
+          shipmentLocation,
+          eventDate,
+        },
       },
     );
     if (error || data?.error) {
@@ -490,7 +517,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-[15px] font-bold tracking-tight">
-                  GXZ Health
+                  GXZ Peptides
                 </p>
                 <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-slate-400">
                   Admin console
@@ -869,6 +896,11 @@ function OrderPanel({
             <p className="text-xs text-slate-400">
               {order.variant} · Qty {order.quantity}
             </p>
+            {order.sourceStore && (
+              <p className="mt-1 text-[11px] font-medium text-[#145844] dark:text-emerald-300">
+                From {order.sourceStore}
+              </p>
+            )}
           </div>
           <p className="text-sm font-semibold">${order.total.toFixed(2)}</p>
         </div>
@@ -910,15 +942,51 @@ function OrderPanel({
           placeholder="Enter tracking number"
           className="mb-3 h-9 bg-white dark:bg-slate-900"
         />
-        <label className="mb-1.5 block text-xs font-semibold">Shipment status</label>
-        <select value={shipmentStatus} onChange={(e) => setShipmentStatus(e.target.value as ShipmentStatus)} className="mb-3 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900">
-          <option>Awaiting tracking</option><option>In transit</option><option>Out for delivery</option><option>Delivered</option>
+        <label className="mb-1.5 block text-xs font-semibold">
+          Shipment status
+        </label>
+        <select
+          value={shipmentStatus}
+          onChange={(e) => setShipmentStatus(e.target.value as ShipmentStatus)}
+          className="mb-3 h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+        >
+          <option>Awaiting tracking</option>
+          <option>In transit</option>
+          <option>Out for delivery</option>
+          <option>Delivered</option>
         </select>
-        <label className="mb-1.5 block text-xs font-semibold">Latest update</label>
-        <Textarea value={latestUpdate} onChange={(e) => setLatestUpdate(e.target.value)} placeholder="A shipping label has been prepared. A delivery date will be provided when USPS receives the package." className="mb-3 min-h-20 bg-white text-sm dark:bg-slate-900" />
+        <label className="mb-1.5 block text-xs font-semibold">
+          Latest update
+        </label>
+        <Textarea
+          value={latestUpdate}
+          onChange={(e) => setLatestUpdate(e.target.value)}
+          placeholder="A shipping label has been prepared. A delivery date will be provided when USPS receives the package."
+          className="mb-3 min-h-20 bg-white text-sm dark:bg-slate-900"
+        />
         <div className="mb-3 grid gap-3 sm:grid-cols-2">
-          <div><label className="mb-1.5 block text-xs font-semibold">Event / location</label><Input value={shipmentLocation} onChange={(e) => setShipmentLocation(e.target.value)} placeholder="BAKERSFIELD, CA 93308" className="h-9 bg-white dark:bg-slate-900" /></div>
-          <div><label className="mb-1.5 block text-xs font-semibold">Event date & time</label><Input type="datetime-local" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="h-9 bg-white dark:bg-slate-900" /></div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold">
+              Event / location
+            </label>
+            <Input
+              value={shipmentLocation}
+              onChange={(e) => setShipmentLocation(e.target.value)}
+              placeholder="BAKERSFIELD, CA 93308"
+              className="h-9 bg-white dark:bg-slate-900"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold">
+              Event date & time
+            </label>
+            <Input
+              type="datetime-local"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              className="h-9 bg-white dark:bg-slate-900"
+            />
+          </div>
         </div>
         <Button
           onClick={save}
@@ -1055,7 +1123,7 @@ function AdminLogin({
             GX
           </div>
           <div>
-            <p className="font-bold">GXZ Health</p>
+            <p className="font-bold">GXZ Peptides</p>
             <p className="text-xs font-semibold uppercase tracking-[.16em] text-slate-400">
               Admin console
             </p>
@@ -1091,7 +1159,7 @@ function AdminLogin({
           Sign in to dashboard
         </Button>
         <p className="mt-5 text-center text-xs text-slate-400">
-          Authorized GXZ Health personnel only
+          Authorized GXZ Peptides personnel only
         </p>
       </div>
     </div>
@@ -1156,7 +1224,7 @@ function AdminModule({
     return (
       <PageShell
         title="Dashboard"
-        description="A live overview of GXZ Health commerce operations."
+        description="A live overview of GXZ Peptides commerce operations."
       >
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat

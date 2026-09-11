@@ -152,9 +152,9 @@ VALUES
   ),
   (
     'body-balm',
-    'GXZ Health Nourishing Body Balm',
+    'GXZ Peptides Nourishing Body Balm',
     'Deeply moisturizing body balm with cocoa butter, shea butter, and squalane.',
-    'GXZ Health Nourishing Body Balm is a deeply moisturizing skin treatment formulated with cocoa butter, shea butter, and squalane. Its lightweight, fast-absorbing formula leaves skin silky smooth all day long without grease or heavy residue.',
+    'GXZ Peptides Nourishing Body Balm is a deeply moisturizing skin treatment formulated with cocoa butter, shea butter, and squalane. Its lightweight, fast-absorbing formula leaves skin silky smooth all day long without grease or heavy residue.',
     'Skincare',
     16.99,
     '["Cocoa butter","Shea butter","Squalane"]'::jsonb,
@@ -164,9 +164,9 @@ VALUES
   ),
   (
     'creatine',
-    'GXZ Health Creatine Performance Matrix Powder',
+    'GXZ Peptides Creatine Performance Matrix Powder',
     'Micronized creatine blend to support strength, endurance, and recovery.',
-    'GXZ Health Creatine Performance Matrix Powder is built to support strength output, workout endurance, and hydration support during training. The formula mixes cleanly and fits easily into a daily performance routine.',
+    'GXZ Peptides Creatine Performance Matrix Powder is built to support strength output, workout endurance, and hydration support during training. The formula mixes cleanly and fits easily into a daily performance routine.',
     'Supplement',
     29.99,
     '["Boosts strength","Enhances endurance","Supports recovery"]'::jsonb,

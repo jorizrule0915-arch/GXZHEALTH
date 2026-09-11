@@ -1,6 +1,15 @@
 add_action('wp_footer', function() {
 ?>
 <script>
+// Install this snippet on every WooCommerce storefront that should use the
+// centralized GXZ Peptides checkout. Override GXZ_CHECKOUT_URL in wp-config.php
+// if the checkout is hosted at a different URL.
+const gxzCheckoutUrl = <?php echo wp_json_encode(
+  defined('GXZ_CHECKOUT_URL')
+    ? rtrim(GXZ_CHECKOUT_URL, '/')
+    : 'https://pep.gxzpeptides.com'
+); ?>;
+
 async function customCheckout() {
   try {
     const res = await fetch('/wp-json/wc/store/cart');
@@ -49,6 +58,7 @@ async function customCheckout() {
         quantity: item.quantity,
         total: unitPrice * item.quantity,
         image: item.images?.[0]?.src || item.images?.[0]?.thumbnail || '',
+        productUrl: item.permalink || item.product_url || '',
         selectedOptionLabel,
         attributes
       };
@@ -61,6 +71,9 @@ async function customCheckout() {
     const shipping = hasFreeShipping ? 0 : 10;
     const subtotal = Number(cart.totals?.total_price ?? 0) / currencyDivisor;
     const orderData = {
+      sourceStore: window.location.hostname,
+      sourceUrl: window.location.origin,
+      currency: cart.totals?.currency_code || 'USD',
       items,
       totalItems: cart.items_count,
       subtotal,
@@ -71,8 +84,7 @@ async function customCheckout() {
     const encoded = encodeURIComponent(JSON.stringify(orderData));
     console.log('Redirecting with:', orderData);
 
-    window.location.href =
-      'https://health.gxzhealth.com/checkout?order=' + encoded;
+    window.location.href = gxzCheckoutUrl + '/checkout?order=' + encoded;
   } catch (error) {
     console.error(error);
     alert('Checkout error. Please refresh the page and try again.');
@@ -80,7 +92,7 @@ async function customCheckout() {
 }
 
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('.xoo-wsc-ft-btn-checkout');
+  const btn = e.target.closest('.xoo-wsc-ft-btn-checkout, .checkout-button, .wc-block-cart__submit-button');
 
   if (btn) {
     e.preventDefault();

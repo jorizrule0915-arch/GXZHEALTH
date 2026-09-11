@@ -1,15 +1,22 @@
-import { motion } from 'framer-motion';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, Trash2, Lock, ShoppingBag } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useCart } from '@/contexts/CartContext';
-import { useToast } from '@/hooks/use-toast';
-import { useEffect, useState } from 'react';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import { supabase } from '@/integrations/supabase/client';
+import { motion } from "framer-motion";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Minus,
+  Plus,
+  Trash2,
+  Lock,
+  ShoppingBag,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useCart } from "@/contexts/CartContext";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PromoValidationResult {
   valid: boolean;
@@ -35,53 +42,67 @@ interface AppliedPromoCode {
   discountPercent: number;
 }
 
-const ALL_PRODUCTS_PROMO_NAME = 'All Products';
+const ALL_PRODUCTS_PROMO_NAME = "All Products";
 
 function normalizePromoCode(value: string) {
-  return value.toUpperCase().replace(/\s+/g, '').trim();
+  return value.toUpperCase().replace(/\s+/g, "").trim();
 }
 
 function normalizePromoMatchValue(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 function calculatePromoDiscount(baseTotal: number, discountPercent: number) {
-  return Math.min(baseTotal, Number(((baseTotal * discountPercent) / 100).toFixed(2)));
+  return Math.min(
+    baseTotal,
+    Number(((baseTotal * discountPercent) / 100).toFixed(2)),
+  );
 }
 
 function getOrderSaveErrorMessage(error: { message?: string }) {
-  const message = error.message ?? 'Something went wrong while saving your order.';
+  const message =
+    error.message ?? "Something went wrong while saving your order.";
 
-  if (message.toLowerCase().includes('failed to fetch')) {
-    return 'Checkout backend is unreachable. Please check that VITE_SUPABASE_URL points to an active Supabase project and redeploy the site.';
+  if (message.toLowerCase().includes("failed to fetch")) {
+    return "Checkout backend is unreachable. Please check that VITE_SUPABASE_URL points to an active Supabase project and redeploy the site.";
   }
 
   return message;
 }
 
 function decodeExternalText(value: unknown) {
-  if (typeof value !== 'string') {
-    return '';
+  if (typeof value !== "string") {
+    return "";
   }
 
   return value
-    .replace(/&#8211;|&#x2013;/gi, '-')
-    .replace(/&#8212;|&#x2014;/gi, '-')
-    .replace(/&amp;/gi, '&')
+    .replace(/&#8211;|&#x2013;/gi, "-")
+    .replace(/&#8212;|&#x2014;/gi, "-")
+    .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
     .replace(/&#039;|&#39;/gi, "'")
     .trim();
 }
 
 function getExternalOptionLabel(item: Record<string, unknown>) {
-  const rawMilligrams = typeof item.mg === 'string' || typeof item.mg === 'number' ? String(item.mg).trim() : '';
-  const rawMilliliters = typeof item.ml === 'string' || typeof item.ml === 'number' ? String(item.ml).trim() : '';
+  const rawMilligrams =
+    typeof item.mg === "string" || typeof item.mg === "number"
+      ? String(item.mg).trim()
+      : "";
+  const rawMilliliters =
+    typeof item.ml === "string" || typeof item.ml === "number"
+      ? String(item.ml).trim()
+      : "";
   const milligrams = rawMilligrams
-    ? /mg$/i.test(rawMilligrams) ? rawMilligrams : `${rawMilligrams} mg`
-    : '';
+    ? /mg$/i.test(rawMilligrams)
+      ? rawMilligrams
+      : `${rawMilligrams} mg`
+    : "";
   const milliliters = rawMilliliters
-    ? /ml$/i.test(rawMilliliters) ? rawMilliliters : `${rawMilliliters} mL`
-    : '';
+    ? /ml$/i.test(rawMilliliters)
+      ? rawMilliliters
+      : `${rawMilliliters} mL`
+    : "";
   const directCandidates = [
     item.selectedOptionLabel,
     item.size,
@@ -119,54 +140,90 @@ function getExternalOptionLabel(item: Record<string, unknown>) {
   for (const collection of collections) {
     if (Array.isArray(collection)) {
       for (const entry of collection) {
-        if (!entry || typeof entry !== 'object') continue;
+        if (!entry || typeof entry !== "object") continue;
         const attribute = entry as Record<string, unknown>;
-        const key = decodeExternalText(attribute.name ?? attribute.attribute ?? attribute.key ?? attribute.label);
-        const value = decodeExternalText(attribute.option ?? attribute.value ?? attribute.display_value);
+        const key = decodeExternalText(
+          attribute.name ??
+            attribute.attribute ??
+            attribute.key ??
+            attribute.label,
+        );
+        const value = decodeExternalText(
+          attribute.option ?? attribute.value ?? attribute.display_value,
+        );
 
         if (value && (!key || /size|vial|strength|dose|mg|ml/i.test(key))) {
-          labels.push(key && !/^(size|vial size)$/i.test(key) ? `${key}: ${value}` : value);
+          labels.push(
+            key && !/^(size|vial size)$/i.test(key)
+              ? `${key}: ${value}`
+              : value,
+          );
         }
       }
-    } else if (collection && typeof collection === 'object') {
+    } else if (collection && typeof collection === "object") {
       for (const [rawKey, rawValue] of Object.entries(collection)) {
-        const key = decodeExternalText(rawKey.replace(/^attribute_/, '').replace(/^pa_/, '').replace(/[-_]+/g, ' '));
+        const key = decodeExternalText(
+          rawKey
+            .replace(/^attribute_/, "")
+            .replace(/^pa_/, "")
+            .replace(/[-_]+/g, " "),
+        );
         const value = decodeExternalText(rawValue);
         if (value && /size|vial|strength|dose|mg|ml/i.test(key)) {
-          labels.push(key && !/^(size|vial size)$/i.test(key) ? `${key}: ${value}` : value);
+          labels.push(
+            key && !/^(size|vial size)$/i.test(key)
+              ? `${key}: ${value}`
+              : value,
+          );
         }
       }
     }
   }
 
-  return [...new Set(labels)].join(' / ');
+  return [...new Set(labels)].join(" / ");
 }
 
 const Checkout = () => {
   const location = useLocation();
-  const { items, updateQuantity, removeItem, totalPrice, totalItems, addItem, clearCart } = useCart();
+  const {
+    items,
+    updateQuantity,
+    removeItem,
+    totalPrice,
+    totalItems,
+    addItem,
+    clearCart,
+  } = useCart();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [promoInput, setPromoInput] = useState('');
-  const [appliedPromoCode, setAppliedPromoCode] = useState<AppliedPromoCode | null>(null);
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] =
+    useState<AppliedPromoCode | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [applyingPromoCode, setApplyingPromoCode] = useState(false);
-  const [pendingUrlPromoCode, setPendingUrlPromoCode] = useState<string | null>(null);
+  const [pendingUrlPromoCode, setPendingUrlPromoCode] = useState<string | null>(
+    null,
+  );
 
   const hasFreeShipping = items.some((item) =>
-    item.name.toLowerCase().includes('gxz glp')
+    item.name.toLowerCase().includes("gxz glp"),
   );
 
   const shippingCost = hasFreeShipping ? 0 : 10;
   const subtotal = totalPrice;
   const preDiscountTotal = subtotal + shippingCost;
   const getPromoDiscountBase = (promo: AppliedPromoCode) => {
-    if (promo.promoProductName.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase()) {
+    if (
+      promo.promoProductName.toLowerCase() ===
+      ALL_PRODUCTS_PROMO_NAME.toLowerCase()
+    ) {
       return preDiscountTotal;
     }
 
-    const normalizedPromoProduct = normalizePromoMatchValue(promo.promoProductName);
+    const normalizedPromoProduct = normalizePromoMatchValue(
+      promo.promoProductName,
+    );
 
     return items.reduce((sum, item) => {
       const normalizedItemName = normalizePromoMatchValue(item.name);
@@ -178,7 +235,9 @@ const Checkout = () => {
     }, 0);
   };
   const getMatchingPromoQuantity = (promoProductName: string) => {
-    if (promoProductName.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase()) {
+    if (
+      promoProductName.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase()
+    ) {
       return totalItems;
     }
 
@@ -194,43 +253,54 @@ const Checkout = () => {
     }, 0);
   };
   const previewPromoDiscount = appliedPromoCode
-    ? calculatePromoDiscount(getPromoDiscountBase(appliedPromoCode), appliedPromoCode.discountPercent)
+    ? calculatePromoDiscount(
+        getPromoDiscountBase(appliedPromoCode),
+        appliedPromoCode.discountPercent,
+      )
     : 0;
   const orderTotal = Math.max(preDiscountTotal - previewPromoDiscount, 0);
 
   const [customerInfo, setCustomerInfo] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
   });
 
-  const validatePromoCode = async (rawCode: string): Promise<{ valid: boolean; message: string; result?: PromoValidationResult }> => {
+  const validatePromoCode = async (
+    rawCode: string,
+  ): Promise<{
+    valid: boolean;
+    message: string;
+    result?: PromoValidationResult;
+  }> => {
     const normalizedCode = normalizePromoCode(rawCode);
 
     if (!normalizedCode) {
       return {
         valid: false,
-        message: 'Please enter a promo code.',
+        message: "Please enter a promo code.",
       };
     }
 
     // Require email for promo code validation
-    if (!customerInfo.email || customerInfo.email.trim() === '') {
+    if (!customerInfo.email || customerInfo.email.trim() === "") {
       return {
         valid: false,
-        message: 'Please enter your email address before applying a promo code.',
+        message:
+          "Please enter your email address before applying a promo code.",
       };
     }
 
-    const { data: directPromoCode, error: directPromoCodeError } = await supabase
-      .from('promo_codes')
-      .select('*')
-      .ilike('code', normalizedCode)
-      .maybeSingle();
+    const { data: directPromoCode, error: directPromoCodeError } =
+      await supabase
+        .from("promo_codes")
+        .select("*")
+        .ilike("code", normalizedCode)
+        .maybeSingle();
 
     if (directPromoCodeError) {
       return {
@@ -242,15 +312,16 @@ const Checkout = () => {
     if (!directPromoCode) {
       return {
         valid: false,
-        message: 'Promo code not found.',
+        message: "Promo code not found.",
       };
     }
 
-    const { data: directPromoProduct, error: directPromoProductError } = await supabase
-      .from('promo_products')
-      .select('*')
-      .eq('id', directPromoCode.promo_product_id)
-      .maybeSingle();
+    const { data: directPromoProduct, error: directPromoProductError } =
+      await supabase
+        .from("promo_products")
+        .select("*")
+        .eq("id", directPromoCode.promo_product_id)
+        .maybeSingle();
 
     if (directPromoProductError) {
       return {
@@ -262,40 +333,54 @@ const Checkout = () => {
     if (!directPromoProduct) {
       return {
         valid: false,
-        message: 'This promo code is not linked to a product.',
+        message: "This promo code is not linked to a product.",
       };
     }
 
-    if (directPromoCode.expires_at && new Date(directPromoCode.expires_at) < new Date()) {
+    if (
+      directPromoCode.expires_at &&
+      new Date(directPromoCode.expires_at) < new Date()
+    ) {
       return {
         valid: false,
-        message: 'This promo code has expired.',
+        message: "This promo code has expired.",
       };
     }
 
-    if (directPromoCode.usage_limit !== null && directPromoCode.total_uses >= directPromoCode.usage_limit) {
+    if (
+      directPromoCode.usage_limit !== null &&
+      directPromoCode.total_uses >= directPromoCode.usage_limit
+    ) {
       return {
         valid: false,
-        message: 'This promo code has reached its usage limit.',
+        message: "This promo code has reached its usage limit.",
       };
     }
 
     const isDirectAllProductsCode =
-      directPromoProduct.sku === '__ALL__' ||
-      directPromoProduct.name.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase();
-    const directMatchingQuantity = isDirectAllProductsCode ? totalItems : getMatchingPromoQuantity(directPromoProduct.name);
-    const directRequiredQuantity = Number(directPromoCode.minimum_order_requirement ?? 0);
+      directPromoProduct.sku === "__ALL__" ||
+      directPromoProduct.name.toLowerCase() ===
+        ALL_PRODUCTS_PROMO_NAME.toLowerCase();
+    const directMatchingQuantity = isDirectAllProductsCode
+      ? totalItems
+      : getMatchingPromoQuantity(directPromoProduct.name);
+    const directRequiredQuantity = Number(
+      directPromoCode.minimum_order_requirement ?? 0,
+    );
 
     if (directMatchingQuantity === 0) {
       return {
         valid: false,
         message: isDirectAllProductsCode
-          ? 'Add items to your cart before applying this code.'
+          ? "Add items to your cart before applying this code."
           : `This code only works for ${directPromoProduct.name}.`,
       };
     }
 
-    if (directRequiredQuantity > 0 && directMatchingQuantity < directRequiredQuantity) {
+    if (
+      directRequiredQuantity > 0 &&
+      directMatchingQuantity < directRequiredQuantity
+    ) {
       return {
         valid: false,
         message: `This code requires at least ${directRequiredQuantity} ${directPromoProduct.name} item(s) in your cart. You have ${directMatchingQuantity}.`,
@@ -304,10 +389,10 @@ const Checkout = () => {
 
     return {
       valid: true,
-      message: 'Promo code applied successfully.',
+      message: "Promo code applied successfully.",
       result: {
         valid: true,
-        message: 'Promo code applied successfully.',
+        message: "Promo code applied successfully.",
         promo_code_id: directPromoCode.id,
         promo_product_id: directPromoProduct.id,
         promo_product_name: directPromoProduct.name,
@@ -330,31 +415,32 @@ const Checkout = () => {
       })),
     };
 
-    let { data, error } = await supabase.rpc('validate_promo_code', {
+    let { data, error } = await supabase.rpc("validate_promo_code", {
       ...validationArgs,
       customer_email: customerInfo.email.trim().toLowerCase(),
     });
 
-    const errorMessage = error?.message?.toLowerCase() ?? '';
+    const errorMessage = error?.message?.toLowerCase() ?? "";
     const canRetryWithoutEmail =
-      errorMessage.includes('customer_email') ||
-      (errorMessage.includes('validate_promo_code') && errorMessage.includes('ambiguous'));
+      errorMessage.includes("customer_email") ||
+      (errorMessage.includes("validate_promo_code") &&
+        errorMessage.includes("ambiguous"));
 
     if (canRetryWithoutEmail) {
-      const retry = await supabase.rpc('validate_promo_code', validationArgs);
+      const retry = await supabase.rpc("validate_promo_code", validationArgs);
       data = retry.data;
       error = retry.error;
     }
 
     const shouldUseDirectPromoLookup =
-      errorMessage.includes('could not choose the best candidate function') ||
-      errorMessage.includes('validate_promo_code');
+      errorMessage.includes("could not choose the best candidate function") ||
+      errorMessage.includes("validate_promo_code");
 
     if (error && shouldUseDirectPromoLookup) {
       const { data: promoCode, error: promoCodeError } = await supabase
-        .from('promo_codes')
-        .select('*')
-        .ilike('code', normalizedCode)
+        .from("promo_codes")
+        .select("*")
+        .ilike("code", normalizedCode)
         .maybeSingle();
 
       if (promoCodeError) {
@@ -367,14 +453,14 @@ const Checkout = () => {
       if (!promoCode) {
         return {
           valid: false,
-          message: 'Promo code not found.',
+          message: "Promo code not found.",
         };
       }
 
       const { data: promoProduct, error: promoProductError } = await supabase
-        .from('promo_products')
-        .select('*')
-        .eq('id', promoCode.promo_product_id)
+        .from("promo_products")
+        .select("*")
+        .eq("id", promoCode.promo_product_id)
         .maybeSingle();
 
       if (promoProductError) {
@@ -387,35 +473,41 @@ const Checkout = () => {
       if (!promoProduct) {
         return {
           valid: false,
-          message: 'This promo code is not linked to a product.',
+          message: "This promo code is not linked to a product.",
         };
       }
 
       if (promoCode.expires_at && new Date(promoCode.expires_at) < new Date()) {
         return {
           valid: false,
-          message: 'This promo code has expired.',
+          message: "This promo code has expired.",
         };
       }
 
-      if (promoCode.usage_limit !== null && promoCode.total_uses >= promoCode.usage_limit) {
+      if (
+        promoCode.usage_limit !== null &&
+        promoCode.total_uses >= promoCode.usage_limit
+      ) {
         return {
           valid: false,
-          message: 'This promo code has reached its usage limit.',
+          message: "This promo code has reached its usage limit.",
         };
       }
 
       const isAllProductsCode =
-        promoProduct.sku === '__ALL__' ||
-        promoProduct.name.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase();
-      const matchingQuantity = isAllProductsCode ? totalItems : getMatchingPromoQuantity(promoProduct.name);
+        promoProduct.sku === "__ALL__" ||
+        promoProduct.name.toLowerCase() ===
+          ALL_PRODUCTS_PROMO_NAME.toLowerCase();
+      const matchingQuantity = isAllProductsCode
+        ? totalItems
+        : getMatchingPromoQuantity(promoProduct.name);
       const requiredQuantity = Number(promoCode.minimum_order_requirement ?? 0);
 
       if (matchingQuantity === 0) {
         return {
           valid: false,
           message: isAllProductsCode
-            ? 'Add items to your cart before applying this code.'
+            ? "Add items to your cart before applying this code."
             : `This code only works for ${promoProduct.name}.`,
         };
       }
@@ -429,10 +521,10 @@ const Checkout = () => {
 
       return {
         valid: true,
-        message: 'Promo code applied successfully.',
+        message: "Promo code applied successfully.",
         result: {
           valid: true,
-          message: 'Promo code applied successfully.',
+          message: "Promo code applied successfully.",
           promo_code_id: promoCode.id,
           promo_product_id: promoProduct.id,
           promo_product_name: promoProduct.name,
@@ -454,18 +546,22 @@ const Checkout = () => {
       };
     }
 
-    const firstResult = (data?.[0] as PromoValidationResult | undefined) ?? undefined;
+    const firstResult =
+      (data?.[0] as PromoValidationResult | undefined) ?? undefined;
 
     if (!firstResult) {
       return {
         valid: false,
-        message: 'Promo validation is temporarily unavailable.',
+        message: "Promo validation is temporarily unavailable.",
       };
     }
 
     const isAllProductsCompatibilityMatch =
-      firstResult.promo_product_name?.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase() &&
-      firstResult.message.toLowerCase().includes('only works for all products') &&
+      firstResult.promo_product_name?.toLowerCase() ===
+        ALL_PRODUCTS_PROMO_NAME.toLowerCase() &&
+      firstResult.message
+        .toLowerCase()
+        .includes("only works for all products") &&
       items.length > 0;
 
     const requiredQuantity = Number(firstResult.minimum_order_requirement ?? 0);
@@ -476,14 +572,22 @@ const Checkout = () => {
     if (requiredQuantity > 0 && matchingQuantity < requiredQuantity) {
       return {
         valid: false,
-        message: `This code requires at least ${requiredQuantity} ${firstResult.promo_product_name ?? 'matching'} item(s) in your cart. You have ${matchingQuantity}.`,
+        message: `This code requires at least ${requiredQuantity} ${firstResult.promo_product_name ?? "matching"} item(s) in your cart. You have ${matchingQuantity}.`,
       };
     }
 
-    const isOldPreviousOrderRequirementMessage =
-      firstResult.message.toLowerCase().includes('completed order');
+    const isOldPreviousOrderRequirementMessage = firstResult.message
+      .toLowerCase()
+      .includes("completed order");
 
-    if (!firstResult.valid && !isAllProductsCompatibilityMatch && !(isOldPreviousOrderRequirementMessage && matchingQuantity >= requiredQuantity)) {
+    if (
+      !firstResult.valid &&
+      !isAllProductsCompatibilityMatch &&
+      !(
+        isOldPreviousOrderRequirementMessage &&
+        matchingQuantity >= requiredQuantity
+      )
+    ) {
       return {
         valid: false,
         message: firstResult.message,
@@ -497,15 +601,18 @@ const Checkout = () => {
     };
   };
 
-  const applyPromoCode = async (providedCode?: string, silent = false): Promise<{ ok: boolean; promo?: AppliedPromoCode; message?: string }> => {
+  const applyPromoCode = async (
+    providedCode?: string,
+    silent = false,
+  ): Promise<{ ok: boolean; promo?: AppliedPromoCode; message?: string }> => {
     if (items.length === 0) {
-      const message = 'Add items to your cart before applying a promo code.';
+      const message = "Add items to your cart before applying a promo code.";
       setPromoError(message);
       if (!silent) {
         toast({
-          title: 'Cannot apply code yet',
+          title: "Cannot apply code yet",
           description: message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
       return { ok: false, message };
@@ -518,16 +625,24 @@ const Checkout = () => {
 
     setApplyingPromoCode(false);
 
-    if (!validation.valid || !validation.result || !validation.result.promo_code_id || !validation.result.promo_product_id || !validation.result.code || !validation.result.promo_product_name || !validation.result.influencer_name) {
-      const message = validation.message || 'Unable to validate promo code.';
+    if (
+      !validation.valid ||
+      !validation.result ||
+      !validation.result.promo_code_id ||
+      !validation.result.promo_product_id ||
+      !validation.result.code ||
+      !validation.result.promo_product_name ||
+      !validation.result.influencer_name
+    ) {
+      const message = validation.message || "Unable to validate promo code.";
       setPromoError(message);
       setAppliedPromoCode(null);
 
       if (!silent) {
         toast({
-          title: 'Invalid promo code',
+          title: "Invalid promo code",
           description: message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
 
@@ -549,7 +664,7 @@ const Checkout = () => {
 
     if (!silent) {
       toast({
-        title: 'Promo code applied',
+        title: "Promo code applied",
         description: `${nextAppliedPromo.code} is active for ${nextAppliedPromo.promoProductName}.`,
       });
     }
@@ -563,10 +678,10 @@ const Checkout = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const orderParam = params.get('order');
-    const codeParam = params.get('code');
+    const orderParam = params.get("order");
+    const codeParam = params.get("code");
 
-    const normalizedCode = codeParam ? normalizePromoCode(codeParam) : '';
+    const normalizedCode = codeParam ? normalizePromoCode(codeParam) : "";
     if (normalizedCode) {
       setPromoInput(normalizedCode);
       setPendingUrlPromoCode(normalizedCode);
@@ -575,48 +690,82 @@ const Checkout = () => {
     if (orderParam) {
       try {
         const decoded = JSON.parse(decodeURIComponent(orderParam));
+        if (!decoded || !Array.isArray(decoded.items) || decoded.items.length === 0) {
+          throw new Error("The external cart payload contains no products.");
+        }
+        const sourceStore =
+          decodeExternalText(decoded.sourceStore) || "External store";
+        const sourceUrl = decodeExternalText(decoded.sourceUrl);
+        const currency = decodeExternalText(decoded.currency) || "USD";
 
         clearCart();
 
-        decoded.items.forEach((item: Record<string, unknown>, index: number) => {
-          const cleanName = decodeExternalText(item.name);
-          const optionLabel = getExternalOptionLabel(item);
-          const cartId = `${index}-${cleanName}-${optionLabel}`;
-          const price = Number(item.price ?? 0);
-          const image = typeof item.image === 'string' && item.image ? item.image : '/placeholder.png';
-          const quantity = Math.max(1, Math.floor(Number(item.quantity ?? 1)) || 1);
+        decoded.items.forEach(
+          (item: Record<string, unknown>, index: number) => {
+            const cleanName = decodeExternalText(item.name);
+            const optionLabel = getExternalOptionLabel(item);
+            const cartId = `${index}-${cleanName}-${optionLabel}`;
+            const price = Number(item.price ?? 0);
+            const image =
+              typeof item.image === "string" && item.image
+                ? item.image
+                : "/placeholder.png";
+            const quantity = Math.max(
+              1,
+              Math.floor(Number(item.quantity ?? 1)) || 1,
+            );
+            const productUrl = decodeExternalText(item.productUrl);
+            const externalProductId = String(item.productId ?? "");
+            const externalVariationId = String(item.variationId ?? "");
 
-          addItem({
-            id: cartId,
-            name: cleanName,
-            price,
-            image,
-            option: optionLabel || undefined,
-          });
-
-          for (let i = 1; i < quantity; i++) {
             addItem({
               id: cartId,
               name: cleanName,
               price,
               image,
               option: optionLabel || undefined,
+              sourceStore,
+              sourceUrl,
+              productUrl: productUrl || undefined,
+              externalProductId: externalProductId || undefined,
+              externalVariationId: externalVariationId || undefined,
+              currency,
             });
-          }
-        });
+
+            for (let i = 1; i < quantity; i++) {
+              addItem({
+                id: cartId,
+                name: cleanName,
+                price,
+                image,
+                option: optionLabel || undefined,
+                sourceStore,
+                sourceUrl,
+                productUrl: productUrl || undefined,
+                externalProductId: externalProductId || undefined,
+                externalVariationId: externalVariationId || undefined,
+                currency,
+              });
+            }
+          },
+        );
       } catch (error) {
-        console.error('Invalid order data', error);
+        console.error("Invalid order data", error);
       }
     }
 
     if (orderParam || codeParam) {
       const nextParams = new URLSearchParams();
       if (normalizedCode) {
-        nextParams.set('code', normalizedCode);
+        nextParams.set("code", normalizedCode);
       }
 
       const queryString = nextParams.toString();
-      window.history.replaceState({}, document.title, queryString ? `/checkout?${queryString}` : '/checkout');
+      window.history.replaceState(
+        {},
+        document.title,
+        queryString ? `/checkout?${queryString}` : "/checkout",
+      );
     }
   }, []);
 
@@ -629,9 +778,9 @@ const Checkout = () => {
       const result = await applyPromoCode(pendingUrlPromoCode, true);
       if (!result.ok && result.message) {
         toast({
-          title: 'Promo code unavailable',
+          title: "Promo code unavailable",
           description: result.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     })();
@@ -644,14 +793,22 @@ const Checkout = () => {
       return;
     }
 
-    if (appliedPromoCode.promoProductName.toLowerCase() === ALL_PRODUCTS_PROMO_NAME.toLowerCase()) {
+    if (
+      appliedPromoCode.promoProductName.toLowerCase() ===
+      ALL_PRODUCTS_PROMO_NAME.toLowerCase()
+    ) {
       return;
     }
 
-    const normalizedPromoProduct = normalizePromoMatchValue(appliedPromoCode.promoProductName);
+    const normalizedPromoProduct = normalizePromoMatchValue(
+      appliedPromoCode.promoProductName,
+    );
     const stillHasAssignedProduct = items.some((item) => {
       const normalizedItemName = normalizePromoMatchValue(item.name);
-      return normalizedItemName.includes(normalizedPromoProduct) || normalizedPromoProduct.includes(normalizedItemName);
+      return (
+        normalizedItemName.includes(normalizedPromoProduct) ||
+        normalizedPromoProduct.includes(normalizedItemName)
+      );
     });
 
     if (stillHasAssignedProduct) {
@@ -659,24 +816,31 @@ const Checkout = () => {
     }
 
     setAppliedPromoCode(null);
-    setPromoError(`${appliedPromoCode.code} was removed because ${appliedPromoCode.promoProductName} is no longer in your cart.`);
+    setPromoError(
+      `${appliedPromoCode.code} was removed because ${appliedPromoCode.promoProductName} is no longer in your cart.`,
+    );
   }, [appliedPromoCode, items]);
 
   const handleCheckout = async () => {
     if (items.length === 0) {
       toast({
-        title: 'Cart is empty',
-        description: 'Please add items to your cart before checking out.',
-        variant: 'destructive',
+        title: "Cart is empty",
+        description: "Please add items to your cart before checking out.",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!customerInfo.name || !customerInfo.email || !customerInfo.phone || !customerInfo.address) {
+    if (
+      !customerInfo.name ||
+      !customerInfo.email ||
+      !customerInfo.phone ||
+      !customerInfo.address
+    ) {
       toast({
-        title: 'Missing information',
-        description: 'Please fill in all required fields.',
-        variant: 'destructive',
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
       });
       return;
     }
@@ -684,12 +848,17 @@ const Checkout = () => {
     let promoForOrder = appliedPromoCode;
 
     if (promoForOrder || promoInput.trim()) {
-      const promoResult = await applyPromoCode(promoForOrder?.code ?? promoInput, true);
+      const promoResult = await applyPromoCode(
+        promoForOrder?.code ?? promoInput,
+        true,
+      );
       if (!promoResult.ok || !promoResult.promo) {
         toast({
-          title: 'Promo code is no longer valid',
-          description: promoResult.message ?? 'Please remove or fix the code before checkout.',
-          variant: 'destructive',
+          title: "Promo code is no longer valid",
+          description:
+            promoResult.message ??
+            "Please remove or fix the code before checkout.",
+          variant: "destructive",
         });
         return;
       }
@@ -698,10 +867,16 @@ const Checkout = () => {
     }
 
     const promoDiscountAmount = promoForOrder
-      ? calculatePromoDiscount(getPromoDiscountBase(promoForOrder), promoForOrder.discountPercent)
+      ? calculatePromoDiscount(
+          getPromoDiscountBase(promoForOrder),
+          promoForOrder.discountPercent,
+        )
       : 0;
 
-    const finalOrderTotal = Math.max(subtotal + shippingCost - promoDiscountAmount, 0);
+    const finalOrderTotal = Math.max(
+      subtotal + shippingCost - promoDiscountAmount,
+      0,
+    );
 
     const orderNumber = `ORD-${Date.now()}`;
     const orderData = {
@@ -709,6 +884,12 @@ const Checkout = () => {
         name: item.name,
         selectedOptionLabel: item.option,
         image: item.image,
+        sourceStore: item.sourceStore,
+        sourceUrl: item.sourceUrl,
+        productUrl: item.productUrl,
+        externalProductId: item.externalProductId,
+        externalVariationId: item.externalVariationId,
+        currency: item.currency,
         price: item.price,
         quantity: item.quantity,
         total: item.price * item.quantity,
@@ -725,7 +906,7 @@ const Checkout = () => {
       customer: customerInfo,
     };
 
-    const { error } = await supabase.from('orders').insert({
+    const { error } = await supabase.from("orders").insert({
       order_number: orderNumber,
       customer_name: customerInfo.name,
       customer_email: customerInfo.email.trim().toLowerCase(),
@@ -742,20 +923,22 @@ const Checkout = () => {
       promo_code: promoForOrder?.code ?? null,
       promo_discount_percent: promoForOrder?.discountPercent ?? null,
       promo_discount_amount: promoDiscountAmount,
-      status: 'processing',
+      status: "processing",
     });
 
     if (error) {
-      console.error('Error saving order:', error);
+      console.error("Error saving order:", error);
       toast({
-        title: 'Order error',
+        title: "Order error",
         description: getOrderSaveErrorMessage(error),
-        variant: 'destructive',
+        variant: "destructive",
       });
       return;
     }
 
-    const encodedData = encodeURIComponent(JSON.stringify({ ...orderData, orderNumber }));
+    const encodedData = encodeURIComponent(
+      JSON.stringify({ ...orderData, orderNumber }),
+    );
     navigate(`/payment?order=${encodedData}`);
   };
 
@@ -785,8 +968,12 @@ const Checkout = () => {
             {items.length === 0 ? (
               <div className="text-center py-16 bg-muted rounded-2xl">
                 <ShoppingBag className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
-                <p className="text-muted-foreground mb-6">Add some products to get started.</p>
+                <h2 className="text-xl font-semibold mb-2">
+                  Your cart is empty
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  Add some products to get started.
+                </p>
                 <Button asChild>
                   <Link to="/products">Browse Products</Link>
                 </Button>
@@ -802,7 +989,12 @@ const Checkout = () => {
                         <Input
                           id="name"
                           value={customerInfo.name}
-                          onChange={(event) => setCustomerInfo({ ...customerInfo, name: event.target.value })}
+                          onChange={(event) =>
+                            setCustomerInfo({
+                              ...customerInfo,
+                              name: event.target.value,
+                            })
+                          }
                           placeholder="John Doe"
                           required
                         />
@@ -814,7 +1006,12 @@ const Checkout = () => {
                             id="email"
                             type="email"
                             value={customerInfo.email}
-                            onChange={(event) => setCustomerInfo({ ...customerInfo, email: event.target.value })}
+                            onChange={(event) =>
+                              setCustomerInfo({
+                                ...customerInfo,
+                                email: event.target.value,
+                              })
+                            }
                             placeholder="john@example.com"
                             required
                           />
@@ -825,7 +1022,12 @@ const Checkout = () => {
                             id="phone"
                             type="tel"
                             value={customerInfo.phone}
-                            onChange={(event) => setCustomerInfo({ ...customerInfo, phone: event.target.value })}
+                            onChange={(event) =>
+                              setCustomerInfo({
+                                ...customerInfo,
+                                phone: event.target.value,
+                              })
+                            }
                             placeholder="(555) 123-4567"
                             required
                           />
@@ -836,7 +1038,12 @@ const Checkout = () => {
                         <Input
                           id="address"
                           value={customerInfo.address}
-                          onChange={(event) => setCustomerInfo({ ...customerInfo, address: event.target.value })}
+                          onChange={(event) =>
+                            setCustomerInfo({
+                              ...customerInfo,
+                              address: event.target.value,
+                            })
+                          }
                           placeholder="123 Main St"
                           required
                         />
@@ -847,7 +1054,12 @@ const Checkout = () => {
                           <Input
                             id="city"
                             value={customerInfo.city}
-                            onChange={(event) => setCustomerInfo({ ...customerInfo, city: event.target.value })}
+                            onChange={(event) =>
+                              setCustomerInfo({
+                                ...customerInfo,
+                                city: event.target.value,
+                              })
+                            }
                             placeholder="New York"
                           />
                         </div>
@@ -856,7 +1068,12 @@ const Checkout = () => {
                           <Input
                             id="state"
                             value={customerInfo.state}
-                            onChange={(event) => setCustomerInfo({ ...customerInfo, state: event.target.value })}
+                            onChange={(event) =>
+                              setCustomerInfo({
+                                ...customerInfo,
+                                state: event.target.value,
+                              })
+                            }
                             placeholder="NY"
                           />
                         </div>
@@ -865,7 +1082,12 @@ const Checkout = () => {
                           <Input
                             id="zipCode"
                             value={customerInfo.zipCode}
-                            onChange={(event) => setCustomerInfo({ ...customerInfo, zipCode: event.target.value })}
+                            onChange={(event) =>
+                              setCustomerInfo({
+                                ...customerInfo,
+                                zipCode: event.target.value,
+                              })
+                            }
                             placeholder="10001"
                           />
                         </div>
@@ -875,7 +1097,9 @@ const Checkout = () => {
 
                   <div className="bg-card rounded-2xl border border-border overflow-hidden">
                     <div className="p-6 border-b border-border">
-                      <h2 className="font-semibold">Order Items ({totalItems})</h2>
+                      <h2 className="font-semibold">
+                        Order Items ({totalItems})
+                      </h2>
                     </div>
 
                     <div className="divide-y divide-border">
@@ -888,21 +1112,31 @@ const Checkout = () => {
                           />
                           <div className="flex-1">
                             <h3 className="font-medium">{item.name}</h3>
-                            {item.option && <p className="mt-1 text-sm text-muted-foreground">Size: {item.option}</p>}
+                            {item.option && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                Size: {item.option}
+                              </p>
+                            )}
                             <p className="text-secondary font-semibold mt-1">
                               ${item.price.toFixed(2)} USD each
                             </p>
 
                             <div className="flex items-center gap-3 mt-4">
                               <button
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                onClick={() =>
+                                  updateQuantity(item.id, item.quantity - 1)
+                                }
                                 className="w-8 h-8 rounded-lg border flex items-center justify-center hover:bg-accent transition-colors"
                               >
                                 <Minus className="w-4 h-4" />
                               </button>
-                              <span className="w-8 text-center font-medium">{item.quantity}</span>
+                              <span className="w-8 text-center font-medium">
+                                {item.quantity}
+                              </span>
                               <button
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() =>
+                                  updateQuantity(item.id, item.quantity + 1)
+                                }
                                 className="w-8 h-8 rounded-lg border flex items-center justify-center hover:bg-accent transition-colors"
                               >
                                 <Plus className="w-4 h-4" />
@@ -949,17 +1183,23 @@ const Checkout = () => {
 
                     <div className="flex justify-between py-6">
                       <span className="font-semibold">Total</span>
-                      <span className="font-display text-2xl font-bold">${orderTotal.toFixed(2)} USD</span>
+                      <span className="font-display text-2xl font-bold">
+                        ${orderTotal.toFixed(2)} USD
+                      </span>
                     </div>
 
                     <div className="space-y-2 pb-6">
-                      <Label htmlFor="promo-code">Have a code? Apply it here</Label>
+                      <Label htmlFor="promo-code">
+                        Have a code? Apply it here
+                      </Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id="promo-code"
                           value={promoInput}
                           onChange={(event) => {
-                            setPromoInput(normalizePromoCode(event.target.value));
+                            setPromoInput(
+                              normalizePromoCode(event.target.value),
+                            );
                             if (promoError) {
                               setPromoError(null);
                             }
@@ -973,13 +1213,15 @@ const Checkout = () => {
                           onClick={() => void applyPromoCode()}
                           disabled={applyingPromoCode}
                         >
-                          {applyingPromoCode ? 'Applying...' : 'Apply'}
+                          {applyingPromoCode ? "Applying..." : "Apply"}
                         </Button>
                       </div>
 
                       {appliedPromoCode && (
                         <p className="text-xs text-emerald-600">
-                          {appliedPromoCode.code} applied for {appliedPromoCode.promoProductName} ({appliedPromoCode.discountPercent}% off).
+                          {appliedPromoCode.code} applied for{" "}
+                          {appliedPromoCode.promoProductName} (
+                          {appliedPromoCode.discountPercent}% off).
                           <button
                             type="button"
                             onClick={() => {
@@ -1025,8 +1267,9 @@ const Checkout = () => {
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-muted-foreground text-sm">
-              <strong>Research Use Only:</strong> All products are intended for research purposes only.
-              Not FDA approved. Not intended for medical, clinical, or insulin use on humans or animals.
+              <strong>Research Use Only:</strong> All products are intended for
+              research purposes only. Not FDA approved. Not intended for
+              medical, clinical, or insulin use on humans or animals.
             </p>
           </div>
         </div>

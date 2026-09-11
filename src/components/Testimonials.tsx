@@ -1,22 +1,22 @@
-import { motion } from 'framer-motion';
-import { Quote } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Quote } from "lucide-react";
 
 const testimonials = [
   {
-    name: 'Marcus T.',
-    order: '5th order',
+    name: "Marcus T.",
+    order: "5th order",
     message:
       "I've been coming back for a while now and every order has been smooth. Fast shipping, everything arrives exactly as expected. GXZ is the only place I trust for this.",
   },
   {
-    name: 'Rachel D.',
-    order: '3rd order',
+    name: "Rachel D.",
+    order: "3rd order",
     message:
       "Honestly wasn't sure at first but after my first order I was sold. Communication is great, packaging is solid, and the quality is consistent every time. Already placed my third.",
   },
   {
-    name: 'James K.',
-    order: '7th order',
+    name: "James K.",
+    order: "7th order",
     message:
       "Seven orders in and I have zero complaints. Reliable, discreet, and always on time. This is the kind of seller you stick with once you find them.",
   },
@@ -58,8 +58,12 @@ const Testimonials = () => {
                 "{t.message}"
               </p>
               <div className="border-t border-border pt-4">
-                <p className="font-semibold text-foreground text-sm">{t.name}</p>
-                <p className="text-secondary text-xs mt-1">{t.order} with GXZ Health</p>
+                <p className="font-semibold text-foreground text-sm">
+                  {t.name}
+                </p>
+                <p className="text-secondary text-xs mt-1">
+                  {t.order} with GXZ Peptides
+                </p>
               </div>
             </motion.div>
           ))}
