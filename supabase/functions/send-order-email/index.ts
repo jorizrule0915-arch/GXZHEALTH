@@ -209,6 +209,7 @@ Deno.serve(async (req: Request) => {
               <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; background-color: #ffffff; border: 1px solid #dbeafe; border-radius: 28px; overflow: hidden; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.10);">
                 <tr>
                   <td style="background: linear-gradient(135deg, #2563eb 0%, #0f172a 100%); padding: 34px 30px 30px 30px;">
+                    <img src="${siteUrl}/gxz-peptides-logo.png" alt="GXZ Peptides" width="190" style="display:block;width:190px;height:auto;margin:0 0 16px 0;background:#ffffff;border-radius:8px;padding:5px;" />
                     <p style="margin: 0 0 10px 0; color: #bfdbfe; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800;">GXZ Peptides</p>
                     <h1 style="color: #ffffff; margin: 0; font-size: 30px; line-height: 1.15; font-weight: 800;">Your order details</h1>
                     <p style="color: #dbeafe; margin: 12px 0 0 0; font-size: 15px; line-height: 1.7;">${customerIntro}</p>
@@ -333,6 +334,7 @@ Deno.serve(async (req: Request) => {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align: top;">
+                          <img src="${siteUrl}/gxz-peptides-logo.png" alt="GXZ Peptides" width="190" style="display:block;width:190px;height:auto;margin:0 0 16px 0;background:#ffffff;border-radius:8px;padding:5px;" />
                           <p style="margin: 0 0 10px 0; color: #bfdbfe; font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 800;">GXZ Peptides Order Desk</p>
                           <h1 style="color: #ffffff; margin: 0; font-size: 30px; line-height: 1.1; font-weight: 800;">New order received</h1>
                           <p style="color: #dbeafe; margin: 10px 0 0 0; font-size: 15px; line-height: 1.7;">A fresh order just came through the store. Review the customer details, shipping fee, and total below.</p>

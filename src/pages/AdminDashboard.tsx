@@ -511,18 +511,15 @@ export default function AdminDashboard() {
       >
         <div className="flex h-full flex-col">
           <div className="mb-7 flex items-center justify-between px-3">
-            <div className="flex items-center gap-2.5">
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#103f35] text-sm font-black text-white">
-                GX
-              </div>
-              <div>
-                <p className="text-[15px] font-bold tracking-tight">
-                  GXZ Peptides
-                </p>
-                <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-slate-400">
-                  Admin console
-                </p>
-              </div>
+            <div>
+              <img
+                src="/gxz-peptides-logo.png"
+                alt="GXZ Peptides"
+                className="h-11 w-[155px] rounded-lg bg-white object-contain px-1"
+              />
+              <p className="mt-1 text-center text-[9px] font-semibold uppercase tracking-[.16em] text-slate-400">
+                Admin console
+              </p>
             </div>
             <button className="lg:hidden" onClick={() => setMobileNav(false)}>
               <X className="h-5 w-5" />
@@ -1118,16 +1115,15 @@ function AdminLogin({
       <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-emerald-200/40 blur-3xl" />
       <div className="absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-teal-200/40 blur-3xl" />
       <div className="relative w-full max-w-[420px] rounded-2xl border border-white bg-white p-8 shadow-[0_24px_70px_rgba(15,63,53,.12)]">
-        <div className="mb-8 flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#103f35] text-sm font-black text-white">
-            GX
-          </div>
-          <div>
-            <p className="font-bold">GXZ Peptides</p>
-            <p className="text-xs font-semibold uppercase tracking-[.16em] text-slate-400">
-              Admin console
-            </p>
-          </div>
+        <div className="mb-8">
+          <img
+            src="/gxz-peptides-logo.png"
+            alt="GXZ Peptides"
+            className="h-20 w-auto max-w-[280px] object-contain"
+          />
+          <p className="mt-2 text-xs font-semibold uppercase tracking-[.16em] text-slate-400">
+            Admin console
+          </p>
         </div>
         <div className="mb-6">
           <h1 className="font-sans text-2xl font-bold tracking-tight">

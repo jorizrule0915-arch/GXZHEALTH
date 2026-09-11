@@ -45,18 +45,10 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <img
-              src="/GXZ-Health.png"
+              src="/gxz-peptides-logo.png"
               alt="GXZ Peptides Logo"
-              className="w-10 h-10 rounded-xl object-contain"
+              className="h-12 w-auto max-w-[180px] rounded-lg bg-white px-2 object-contain"
             />
-            <span
-              className={cn(
-                "font-display text-xl font-bold tracking-tight transition-colors",
-                shouldShowBackground ? "text-primary" : "text-white",
-              )}
-            >
-              GXZ PEPTIDES
-            </span>
           </Link>
 
           {/* Desktop Navigation */}

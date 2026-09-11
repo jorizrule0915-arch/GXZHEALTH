@@ -11,13 +11,10 @@ const Footer = () => {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <img
-                src="/GXZ-Health.png"
+                src="/gxz-peptides-logo.png"
                 alt="GXZ Peptides Logo"
-                className="w-10 h-10 rounded-xl object-contain"
+                className="h-16 w-auto max-w-[220px] rounded-lg bg-white px-2 object-contain"
               />
-              <span className="font-display text-xl font-bold">
-                GXZ PEPTIDES
-              </span>
             </div>
             <p className="text-white/70 text-sm leading-relaxed">
               GXZ Peptides Premium Performance & Wellness Products High-quality
