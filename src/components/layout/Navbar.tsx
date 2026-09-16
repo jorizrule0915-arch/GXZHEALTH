@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, ShieldCheck, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Menu, ShieldCheck, ShoppingCart, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import CartButton from "@/components/cart/CartButton";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -23,14 +22,15 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { path: "/", label: "Home" },
-    { path: "/products", label: "Products" },
-    { path: "/how-to-use", label: "How to Use" },
-    { path: "/about", label: "About" },
-    { path: "/returnandrefundpolicy", label: "Return & Refund Policy" },
+    { href: `${storefrontUrl}/`, label: "Home" },
+    { href: `${storefrontUrl}/products`, label: "Products" },
+    { href: `${storefrontUrl}/how-to-use`, label: "How to Use" },
+    { href: `${storefrontUrl}/about`, label: "About" },
+    {
+      href: `${storefrontUrl}/returnandrefundpolicy`,
+      label: "Return & Refund Policy",
+    },
   ];
-
-  const isActive = (path: string) => location.pathname === path;
 
   const isHomePage = location.pathname === "/";
   const shouldShowBackground = isScrolled || !isHomePage;
@@ -72,55 +72,69 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
+          <a href={storefrontUrl} className="flex items-center gap-3 group">
             <img
               src="/gxz-peptides-logo.png"
               alt="GXZ Peptides Logo"
               className="h-12 w-auto max-w-[180px] rounded-lg bg-white px-2 object-contain"
             />
-          </Link>
+          </a>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
+              <a
+                key={link.href}
+                href={link.href}
                 className={cn(
                   "text-sm font-medium transition-all duration-300 relative py-2",
                   shouldShowBackground
-                    ? isActive(link.path)
-                      ? "text-secondary"
-                      : "text-foreground/70 hover:text-foreground"
-                    : isActive(link.path)
-                      ? "text-white"
-                      : "text-white/70 hover:text-white",
+                    ? "text-foreground/70 hover:text-foreground"
+                    : "text-white/70 hover:text-white",
                   "after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-secondary after:transition-all after:duration-300",
-                  isActive(link.path)
-                    ? "after:w-full"
-                    : "after:w-0 hover:after:w-full",
+                  "after:w-0 hover:after:w-full",
                 )}
               >
                 {link.label}
-              </Link>
+              </a>
             ))}
           </div>
 
           {/* CTA Button & Cart */}
           <div className="hidden md:flex items-center gap-4">
-            <CartButton isScrolled={shouldShowBackground} />
+            <a
+              href={`${storefrontUrl}/products`}
+              aria-label="Shop products on GXZ Health and Wellness"
+              className={cn(
+                "rounded-lg p-2 transition-colors",
+                shouldShowBackground
+                  ? "text-foreground/70 hover:bg-muted hover:text-foreground"
+                  : "text-white/80 hover:bg-white/10 hover:text-white",
+              )}
+            >
+              <ShoppingCart className="h-5 w-5" />
+            </a>
             <Button
               asChild
               variant={shouldShowBackground ? "default" : "hero"}
               size="default"
             >
-              <Link to="/products">Shop Now</Link>
+              <a href={`${storefrontUrl}/products`}>Shop Now</a>
             </Button>
           </div>
 
           {/* Mobile: Cart & Menu */}
           <div className="md:hidden flex items-center gap-2">
-            <CartButton isScrolled={shouldShowBackground} />
+            <a
+              href={`${storefrontUrl}/products`}
+              aria-label="Shop products on GXZ Health and Wellness"
+              className={cn(
+                "rounded-lg p-2 transition-colors",
+                shouldShowBackground ? "text-foreground" : "text-white",
+              )}
+            >
+              <ShoppingCart className="h-5 w-5" />
+            </a>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={cn(
@@ -142,28 +156,23 @@ const Navbar = () => {
           <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-xl border-t">
             <div className="py-4 px-6 space-y-2">
               {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
+                <a
+                  key={link.href}
+                  href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={cn(
-                    "block py-3 px-4 rounded-lg text-sm font-medium transition-colors",
-                    isActive(link.path)
-                      ? "bg-secondary/10 text-secondary"
-                      : "text-foreground/70 hover:bg-muted",
-                  )}
+                  className="block rounded-lg px-4 py-3 text-sm font-medium text-foreground/70 transition-colors hover:bg-muted"
                 >
                   {link.label}
-                </Link>
+                </a>
               ))}
               <div className="pt-4">
                 <Button asChild variant="buy" className="w-full">
-                  <Link
-                    to="/products"
+                  <a
+                    href={`${storefrontUrl}/products`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Shop Now
-                  </Link>
+                  </a>
                 </Button>
               </div>
             </div>
