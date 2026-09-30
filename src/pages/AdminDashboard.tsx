@@ -45,6 +45,7 @@ import creatine from "@/assets/products/Creatine.jpg";
 type View =
   | "dashboard"
   | "orders"
+  | "checkout-only"
   | "customers"
   | "products"
   | "tracking"
@@ -213,6 +214,7 @@ function savedItemImage(item: Record<string, Json | undefined> | null) {
 const nav: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "orders", label: "Orders", icon: ShoppingBag },
+  { id: "checkout-only", label: "Checkout only", icon: Clock3 },
   { id: "customers", label: "Customers", icon: Users },
   { id: "products", label: "Products", icon: Boxes },
   { id: "tracking", label: "Tracking", icon: Truck },
@@ -269,6 +271,9 @@ export default function AdminDashboard() {
   const [shipmentLocation, setShipmentLocation] = useState("");
   const [eventDate, setEventDate] = useState("");
   const order = orders.find((item) => item.id === selected) ?? orders[0];
+  const checkoutOnlyCount = orders.filter(
+    (item) => item.payment === "Not selected",
+  ).length;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -526,9 +531,9 @@ export default function AdminDashboard() {
             </button>
           </div>
           <nav className="space-y-1">
-            {nav.map((item, index) => (
+            {nav.map((item) => (
               <div key={item.id}>
-                {index === 4 && (
+                {item.id === "tracking" && (
                   <p className="mb-2 mt-6 px-3 text-[10px] font-bold uppercase tracking-[.18em] text-slate-400">
                     Operations
                   </p>
@@ -547,9 +552,9 @@ export default function AdminDashboard() {
                 >
                   <item.icon className="h-[18px] w-[18px]" />
                   {item.label}
-                  {item.id === "orders" && (
+                  {(item.id === "orders" || item.id === "checkout-only") && (
                     <span className="ml-auto rounded-full bg-[#145844] px-2 py-0.5 text-[10px] font-bold text-white">
-                      {orders.length}
+                      {item.id === "orders" ? orders.length : checkoutOnlyCount}
                     </span>
                   )}
                 </button>
@@ -1216,6 +1221,9 @@ function AdminModule({
   const customers = [
     ...new Map(orders.map((order) => [order.email, order])).values(),
   ];
+  const checkoutOnlyOrders = orders.filter(
+    (order) => order.payment === "Not selected",
+  );
   if (view === "dashboard")
     return (
       <PageShell
@@ -1320,6 +1328,94 @@ function AdminModule({
             </div>
           </DataCard>
         </div>
+      </PageShell>
+    );
+
+  if (view === "checkout-only")
+    return (
+      <PageShell
+        title="Checkout only"
+        description="Customers who submitted checkout details but did not select or submit a payment method."
+      >
+        <div className="mb-5 grid gap-3 sm:grid-cols-2">
+          <Stat
+            label="Checkout-only customers"
+            value={String(checkoutOnlyOrders.length)}
+            note="No Zelle, Apple Pay, or other method selected"
+            icon={<Clock3 />}
+          />
+          <Stat
+            label="Potential order value"
+            value={`$${checkoutOnlyOrders
+              .reduce((sum, order) => sum + order.total, 0)
+              .toFixed(2)}`}
+            note="Open checkout value available for follow-up"
+            icon={<CircleDollarSign />}
+          />
+        </div>
+
+        <DataCard>
+          <div className="border-b border-slate-100 p-5 dark:border-slate-800">
+            <h2 className="font-semibold">Incomplete payment checkouts</h2>
+            <p className="mt-1 text-xs text-slate-400">
+              These customers completed the checkout form, but payment_method is
+              still empty.
+            </p>
+          </div>
+          {checkoutOnlyOrders.length === 0 ? (
+            <div className="px-5 py-16 text-center">
+              <Check className="mx-auto h-9 w-9 text-emerald-500" />
+              <p className="mt-3 font-semibold">No checkout-only customers</p>
+              <p className="mt-1 text-sm text-slate-400">
+                Every recorded checkout currently has a payment method.
+              </p>
+            </div>
+          ) : (
+            <>
+              <SimpleHead
+                columns={["Order", "Customer", "Cart", "Value", "Follow-up"]}
+              />
+              {checkoutOnlyOrders.map((order) => (
+                <SimpleRow
+                  key={order.id}
+                  cells={[
+                    <div>
+                      <p className="font-semibold text-[#145844] dark:text-emerald-300">
+                        {order.id}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">{order.date}</p>
+                    </div>,
+                    <div>
+                      <p className="font-semibold">{order.customer}</p>
+                      <p className="truncate text-xs text-slate-400">
+                        {order.email}
+                      </p>
+                    </div>,
+                    <div>
+                      <p className="font-medium">{order.product}</p>
+                      <p className="text-xs text-slate-400">
+                        {order.variant} · Qty {order.quantity}
+                      </p>
+                    </div>,
+                    <div>
+                      <p className="font-semibold">${order.total.toFixed(2)}</p>
+                      <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                        No payment selected
+                      </span>
+                    </div>,
+                    <a
+                      href={`mailto:${order.email}?subject=${encodeURIComponent(`Complete your GXZ Peptides order ${order.id}`)}`}
+                      className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-[#145844] transition hover:bg-slate-50 dark:border-slate-700 dark:text-emerald-300 dark:hover:bg-slate-800"
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                      Email customer
+                    </a>,
+                  ]}
+                />
+              ))}
+            </>
+          )}
+        </DataCard>
       </PageShell>
     );
 
