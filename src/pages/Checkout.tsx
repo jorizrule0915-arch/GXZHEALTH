@@ -1275,7 +1275,7 @@ const Checkout = () => {
         </div>
       </section>
 
-      <Footer />
+      <Footer checkout />
     </div>
   );
 };

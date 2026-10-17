@@ -1,6 +1,17 @@
 import { Mail, ExternalLink } from "lucide-react";
 
-const Footer = () => {
+interface FooterProps {
+  checkout?: boolean;
+}
+
+const checkoutPolicyLinks = [
+  { label: "Terms", href: "https://gxzpeptides.com/terms-of-service/" },
+  { label: "Privacy", href: "https://gxzpeptides.com/privacy-policy/" },
+  { label: "Shipping", href: "https://gxzpeptides.com/shipping-delivery/" },
+  { label: "Returns", href: "https://gxzpeptides.com/refunds-returns/" },
+];
+
+const Footer = ({ checkout = false }: FooterProps) => {
   return (
     <footer className="bg-primary text-primary-foreground">
       {/* Main Footer */}
@@ -16,14 +27,16 @@ const Footer = () => {
               />
             </div>
             <p className="text-white/70 text-sm leading-relaxed">
-              GXZ Vitality Premium Performance & Wellness Products. High-quality
-              tools and formulations designed for precision, reliability, and
-              daily performance.
+              {checkout
+                ? "GXZ Vitality products are intended for research purposes only. Not for human consumption."
+                : "GXZ Vitality Premium Performance & Wellness Products. High-quality tools and formulations designed for precision, reliability, and daily performance."}
             </p>
             <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg text-xs">
               <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
               <span className="text-white/80">
-                Premium Performance & Wellness Products
+                {checkout
+                  ? "For Research Purposes Only"
+                  : "Premium Performance & Wellness Products"}
               </span>
             </div>
           </div>
@@ -94,10 +107,26 @@ const Footer = () => {
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
         <div className="container mx-auto px-6 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
+          <div className="flex flex-col items-center justify-between gap-4 text-sm text-white/60 md:flex-row">
             <p>
               © {new Date().getFullYear()} GXZ Vitality. All rights reserved.
             </p>
+            {checkout && (
+              <nav
+                aria-label="Checkout policies"
+                className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
+              >
+                {checkoutPolicyLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="transition-colors hover:text-white"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+            )}
           </div>
         </div>
       </div>

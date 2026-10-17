@@ -40,8 +40,16 @@ const Navbar = () => {
       <nav className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-white/95 py-3 shadow-sm backdrop-blur-xl dark:bg-background/95">
         <div className="container mx-auto flex items-center justify-between px-4 sm:px-6">
           <a
-            href={storefrontUrl}
-            aria-label="Return to GXZ Health and Wellness"
+            href={
+              location.pathname === "/checkout"
+                ? "https://gxzpeptides.com/"
+                : storefrontUrl
+            }
+            aria-label={
+              location.pathname === "/checkout"
+                ? "Return to GXZ Peptides"
+                : "Return to GXZ Health and Wellness"
+            }
             className="flex items-center"
           >
             <img
