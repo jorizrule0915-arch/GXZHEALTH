@@ -1,12 +1,11 @@
-import { Link } from "react-router-dom";
-import { Beaker, Mail, MapPin, Phone, ExternalLink } from "lucide-react";
+import { Mail, ExternalLink } from "lucide-react";
 
 const Footer = () => {
   return (
     <footer className="bg-primary text-primary-foreground">
       {/* Main Footer */}
       <div className="container mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
           {/* Brand Column */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -36,46 +35,28 @@ const Footer = () => {
             </h4>
             <ul className="space-y-3">
               {[
-                { label: "Home", path: "/" },
-                { label: "Products", path: "/products" },
-                { label: "How to Use", path: "/how-to-use" },
-                { label: "About Us", path: "/about" },
+                { label: "Home", href: "https://gxzpeptides.com/" },
+                {
+                  label: "Products",
+                  href: "https://gxzpeptides.com/shop2/",
+                },
+                {
+                  label: "How to Use",
+                  href: "https://www.gxzhealthandwellness.com/how-to-use",
+                },
+                {
+                  label: "About Us",
+                  href: "https://gxzpeptides.com/what-is-peptides/",
+                },
               ].map((link) => (
-                <li key={link.path}>
-                  <Link
-                    to={link.path}
+                <li key={link.href}>
+                  <a
+                    href={link.href}
                     className="text-white/70 hover:text-white text-sm transition-colors inline-flex items-center gap-2 group"
                   >
                     <span className="w-1 h-1 bg-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                     {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Products */}
-          <div>
-            <h4 className="font-display text-lg font-semibold mb-6">
-              Products
-            </h4>
-            <ul className="space-y-3">
-              {[
-                "Reusable Injection Pens",
-                "Pen Cartridges",
-                "Single-Use Needles",
-                "Syringes",
-                "GXZ Vitality Nourishing Body Balm",
-                "GXZ Vitality Creatine",
-              ].map((product) => (
-                <li key={product}>
-                  <Link
-                    to="/products"
-                    className="text-white/70 hover:text-white text-sm transition-colors inline-flex items-center gap-2 group"
-                  >
-                    <span className="w-1 h-1 bg-teal-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {product}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
