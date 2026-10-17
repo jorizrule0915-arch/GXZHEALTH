@@ -2,7 +2,7 @@ add_action('wp_footer', function() {
 ?>
 <script>
 // Install this snippet on every WooCommerce storefront that should use the
-// centralized GXZ Peptides checkout. Override GXZ_CHECKOUT_URL in wp-config.php
+// centralized GXZ Vitality checkout. Override GXZ_CHECKOUT_URL in wp-config.php
 // if the checkout is hosted at a different URL.
 const gxzCheckoutUrl = <?php echo wp_json_encode(
   defined('GXZ_CHECKOUT_URL')

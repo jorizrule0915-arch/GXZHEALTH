@@ -62,7 +62,7 @@ const Testimonials = () => {
                   {t.name}
                 </p>
                 <p className="text-secondary text-xs mt-1">
-                  {t.order} with GXZ Peptides
+                  {t.order} with GXZ Vitality
                 </p>
               </div>
             </motion.div>

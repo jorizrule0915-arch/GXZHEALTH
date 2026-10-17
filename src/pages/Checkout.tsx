@@ -962,7 +962,7 @@ const Checkout = () => {
             </Link>
 
             <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-8">
-              Checkout
+              GXZ Vitality Checkout
             </h1>
 
             {items.length === 0 ? (

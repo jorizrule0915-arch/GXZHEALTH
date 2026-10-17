@@ -30,7 +30,7 @@ const RefundPolicy: React.FC = () => {
             Refund & Return <span className="text-teal-400">Policy</span>
           </h1>
           <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-            At GXZ Peptides, we stand behind the quality of our products and
+            At GXZ Vitality, we stand behind the quality of our products and
             strive to ensure every customer has a positive experience.
           </p>
           <p className="text-sm text-slate-400 mt-4">
@@ -44,7 +44,7 @@ const RefundPolicy: React.FC = () => {
         {/* Introduction Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
           <p className="text-slate-700 text-lg leading-relaxed">
-            At GXZ Peptides, we stand behind the quality of our products and
+            At GXZ Vitality, we stand behind the quality of our products and
             strive to ensure every customer has a positive experience. Please
             review the policy below regarding refunds, returns, and exchanges.
           </p>

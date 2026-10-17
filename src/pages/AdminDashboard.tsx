@@ -518,8 +518,8 @@ export default function AdminDashboard() {
           <div className="mb-7 flex items-center justify-between px-3">
             <div>
               <img
-                src="/gxz-peptides-logo.png"
-                alt="GXZ Peptides"
+                src="/gxz-vitality-logo.png"
+                alt="GXZ Vitality"
                 className="h-11 w-[155px] rounded-lg bg-white object-contain px-1"
               />
               <p className="mt-1 text-center text-[9px] font-semibold uppercase tracking-[.16em] text-slate-400">
@@ -1122,8 +1122,8 @@ function AdminLogin({
       <div className="relative w-full max-w-[420px] rounded-2xl border border-white bg-white p-8 shadow-[0_24px_70px_rgba(15,63,53,.12)]">
         <div className="mb-8">
           <img
-            src="/gxz-peptides-logo.png"
-            alt="GXZ Peptides"
+            src="/gxz-vitality-logo.png"
+            alt="GXZ Vitality"
             className="h-20 w-auto max-w-[280px] object-contain"
           />
           <p className="mt-2 text-xs font-semibold uppercase tracking-[.16em] text-slate-400">
@@ -1160,7 +1160,7 @@ function AdminLogin({
           Sign in to dashboard
         </Button>
         <p className="mt-5 text-center text-xs text-slate-400">
-          Authorized GXZ Peptides personnel only
+          Authorized GXZ Vitality personnel only
         </p>
       </div>
     </div>
@@ -1228,7 +1228,7 @@ function AdminModule({
     return (
       <PageShell
         title="Dashboard"
-        description="A live overview of GXZ Peptides commerce operations."
+        description="A live overview of GXZ Vitality commerce operations."
       >
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat
@@ -1404,7 +1404,7 @@ function AdminModule({
                       </span>
                     </div>,
                     <a
-                      href={`mailto:${order.email}?subject=${encodeURIComponent(`Complete your GXZ Peptides order ${order.id}`)}`}
+                      href={`mailto:${order.email}?subject=${encodeURIComponent(`Complete your GXZ Vitality order ${order.id}`)}`}
                       className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-[#145844] transition hover:bg-slate-50 dark:border-slate-700 dark:text-emerald-300 dark:hover:bg-slate-800"
                     >
                       <Mail className="h-3.5 w-3.5" />

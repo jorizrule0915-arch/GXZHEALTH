@@ -45,8 +45,8 @@ const Navbar = () => {
             className="flex items-center"
           >
             <img
-              src="/gxz-peptides-logo.png"
-              alt="GXZ Peptides Logo"
+              src="/gxz-vitality-logo.png"
+              alt="GXZ Vitality Logo"
               className="h-11 w-auto max-w-[160px] rounded-lg bg-white px-2 object-contain sm:h-12 sm:max-w-[180px]"
             />
           </a>
@@ -74,8 +74,8 @@ const Navbar = () => {
           {/* Logo */}
           <a href={storefrontUrl} className="flex items-center gap-3 group">
             <img
-              src="/gxz-peptides-logo.png"
-              alt="GXZ Peptides Logo"
+              src="/gxz-vitality-logo.png"
+              alt="GXZ Vitality Logo"
               className="h-12 w-auto max-w-[180px] rounded-lg bg-white px-2 object-contain"
             />
           </a>

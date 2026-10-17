@@ -11,13 +11,13 @@ const Footer = () => {
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <img
-                src="/gxz-peptides-logo.png"
-                alt="GXZ Peptides Logo"
+                src="/gxz-vitality-logo.png"
+                alt="GXZ Vitality Logo"
                 className="h-16 w-auto max-w-[220px] rounded-lg bg-white px-2 object-contain"
               />
             </div>
             <p className="text-white/70 text-sm leading-relaxed">
-              GXZ Peptides Premium Performance & Wellness Products High-quality
+              GXZ Vitality Premium Performance & Wellness Products. High-quality
               tools and formulations designed for precision, reliability, and
               daily performance.
             </p>
@@ -65,8 +65,8 @@ const Footer = () => {
                 "Pen Cartridges",
                 "Single-Use Needles",
                 "Syringes",
-                "GXZ Peptides Nourishing Body Balm",
-                "GXZ Peptides Creatine",
+                "GXZ Vitality Nourishing Body Balm",
+                "GXZ Vitality Creatine",
               ].map((product) => (
                 <li key={product}>
                   <Link
@@ -115,7 +115,7 @@ const Footer = () => {
         <div className="container mx-auto px-6 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
             <p>
-              © {new Date().getFullYear()} GXZ Peptides. All rights reserved.
+              © {new Date().getFullYear()} GXZ Vitality. All rights reserved.
             </p>
           </div>
         </div>

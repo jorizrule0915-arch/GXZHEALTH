@@ -220,11 +220,11 @@ const builtInSeeds: BuiltInSeed[] = [
   },
   {
     slug: "body-balm",
-    name: "GXZ Peptides Nourishing Body Balm",
+    name: "GXZ Vitality Nourishing Body Balm",
     description:
       "Deeply moisturizing body balm with cocoa butter, shea butter, and squalane.",
     longDescription:
-      "GXZ Peptides Nourishing Body Balm is a deeply moisturizing skin treatment formulated with cocoa butter, shea butter, and squalane. Its lightweight, fast-absorbing formula leaves skin silky smooth all day long without grease or heavy residue.",
+      "GXZ Vitality Nourishing Body Balm is a deeply moisturizing skin treatment formulated with cocoa butter, shea butter, and squalane. Its lightweight, fast-absorbing formula leaves skin silky smooth all day long without grease or heavy residue.",
     price: 16.99,
     category: "Skincare",
     features: ["Cocoa butter", "Shea butter", "Squalane"],
@@ -244,11 +244,11 @@ const builtInSeeds: BuiltInSeed[] = [
   },
   {
     slug: "creatine",
-    name: "GXZ Peptides Creatine Performance Matrix Powder",
+    name: "GXZ Vitality Creatine Performance Matrix Powder",
     description:
       "Micronized creatine blend to support strength, endurance, and recovery.",
     longDescription:
-      "GXZ Peptides Creatine Performance Matrix Powder is built to support strength output, workout endurance, and hydration support during training. The formula mixes cleanly and fits easily into a daily performance routine.",
+      "GXZ Vitality Creatine Performance Matrix Powder is built to support strength output, workout endurance, and hydration support during training. The formula mixes cleanly and fits easily into a daily performance routine.",
     price: 29.99,
     category: "Supplement",
     features: ["Boosts strength", "Enhances endurance", "Supports recovery"],

@@ -107,7 +107,7 @@ const About = () => {
             </h1>
 
             <p className="text-lg md:text-xl text-white/80 leading-relaxed">
-              GXZ Peptides provides premium wellness supplements and body care
+              GXZ Vitality provides premium wellness supplements and body care
               products designed to support precision, consistency, and everyday
               performance. Our commitment to quality helps you feel and perform
               at your best.
@@ -134,7 +134,7 @@ const About = () => {
               </h2>
               <div className="space-y-4 text-muted-foreground leading-relaxed">
                 <p>
-                  GXZ Peptides was founded with a clear mission: to provide
+                  GXZ Vitality was founded with a clear mission: to provide
                   individuals with high-quality wellness products that deliver
                   real results. We believe that feeling strong, recovered, and
                   energized every day shouldn't be complicated.
@@ -148,7 +148,7 @@ const About = () => {
                 <p>
                   We also provide comprehensive usage guides to ensure every
                   customer — whether new to wellness products or experienced —
-                  gets the most out of every GXZ Peptides product from day one.
+                  gets the most out of every GXZ Vitality product from day one.
                 </p>
               </div>
 
@@ -257,7 +257,7 @@ const About = () => {
             </h2>
             <p className="text-white/80 text-lg mb-8">
               Explore our product catalog or learn how to get the most out of
-              every GXZ Peptides product with our comprehensive guides.
+              every GXZ Vitality product with our comprehensive guides.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button asChild variant="hero" size="lg">
